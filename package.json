@@ -1,0 +1,17 @@
+{
+  "name": "rd-lms",
+  "version": "1.0.0",
+  "description": "Interactive learning management system",
+  "keywords": [
+    "rd-lms",
+    "javascript",
+    "backend"
+  ],
+  "license": "ISC",
+  "author": "Francis Rudra D Cruze",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
