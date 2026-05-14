@@ -2,8 +2,8 @@ import dotenv from "dotenv";
 dotenv.config()
 
 import express from "express";
+import { connectPostgres } from "./configurations/database.js";
 import { PORT } from "./constants.js";
-import { connectDatabases } from "./db/index.js";
 
 const app = express();
 
@@ -15,7 +15,7 @@ app.get("/", (req, res) => {
 
 const startServer = async () => {
   try {
-    await connectDatabases();
+    await connectPostgres();
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
