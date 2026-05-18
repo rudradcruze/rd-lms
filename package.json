@@ -1,28 +1,31 @@
 {
-  "name": "rd-lms",
-  "version": "1.0.0",
-  "description": "Interactive learning management system",
-  "keywords": [
-    "rd-lms",
-    "javascript",
-    "backend"
-  ],
-  "license": "ISC",
-  "author": "Francis Rudra D Cruze",
-  "type": "module",
-  "main": "index.js",
-  "scripts": {
-    "dev": "nodemon -r dotenv/config src/index.js"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.14",
-    "prettier": "^3.8.3"
-  },
-  "dependencies": {
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "pg": "^8.20.0",
-    "pg-hstore": "^2.3.4",
-    "sequelize": "^6.37.8"
-  }
+    "name": "rd-lms",
+    "version": "1.0.0",
+    "description": "Interactive learning management system",
+    "keywords": [
+        "rd-lms",
+        "javascript",
+        "backend"
+    ],
+    "license": "ISC",
+    "author": "Francis Rudra D Cruze",
+    "type": "module",
+    "main": "index.js",
+    "scripts": {
+        "dev": "nodemon -r dotenv/config src/server.js"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.14",
+        "prettier": "^3.8.3"
+    },
+    "dependencies": {
+        "cookie-parser": "^1.4.7",
+        "cors": "^2.8.6",
+        "dotenv": "^17.4.2",
+        "express": "^5.2.1",
+        "pg": "^8.20.0",
+        "pg-hstore": "^2.3.4",
+        "redis": "^5.12.1",
+        "sequelize": "^6.37.8"
+    }
 }
