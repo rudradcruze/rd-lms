@@ -2,12 +2,12 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 
+import config from "./configurations/environment.js";
+
 const app = express();
 
 // CORS configuration
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
-    : ["http://localhost:5173", "http://localhost:3000"];
+const { allowedOrigins, credentials } = config.cors;
 
 app.use(
     cors({
@@ -21,7 +21,7 @@ app.use(
             }
             return callback(null, true);
         },
-        credentials: true,
+        credentials,
     })
 );
 

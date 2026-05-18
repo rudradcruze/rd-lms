@@ -1,46 +1,47 @@
 import { Sequelize } from "sequelize";
+import config from "./environment.js";
 
 const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASSWORD,
-  {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    dialect: "postgres",
+    config.postgres.name,
+    config.postgres.user,
+    config.postgres.password,
+    {
+        host: config.postgres.host,
+        port: config.postgres.port,
+        dialect: "postgres",
 
-    logging: false,
+        logging: false,
 
-    pool: {
-      max: 20,
-      min: 2,
-      acquire: 30000,
-      idle: 10000,
-    },
+        pool: {
+            max: 20,
+            min: 2,
+            acquire: 30000,
+            idle: 10000,
+        },
 
-    dialectOptions: {
-      connectTimeout: 30000,
-    },
+        dialectOptions: {
+            connectTimeout: 30000,
+        },
 
-    define: {
-      timestamps: true,
-      underscored: true,
-    },
-  }
+        define: {
+            timestamps: true,
+            underscored: true,
+        },
+    }
 );
 
 export const connectPostgres = async () => {
-  try {
-    await sequelize.authenticate();
+    try {
+        await sequelize.authenticate();
 
-    console.log("PostgreSQL Connected");
-  } catch (error) {
-    console.error("PostgreSQL Connection Failed");
+        console.log("PostgreSQL Connected");
+    } catch (error) {
+        console.error("PostgreSQL Connection Failed");
 
-    console.error(error.message);
+        console.error(error.message);
 
-    process.exit(1);
-  }
+        process.exit(1);
+    }
 };
 
 export default sequelize;
