@@ -3,6 +3,7 @@ import cors from "cors";
 import express from "express";
 
 import config from "./configurations/environment.js";
+import errorMiddleware from "./middlewares/error.middleware.js";
 
 const app = express();
 
@@ -29,5 +30,7 @@ app.use(cookieParser());
 app.use(express.static("public"));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+app.use(errorMiddleware);
 
 export default app;
