@@ -31,6 +31,8 @@ app.use(express.static("public"));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Routes will be mounted here as modules are added.
+
 app.use(errorMiddleware);
 
 export default app;
