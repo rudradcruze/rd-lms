@@ -4,6 +4,7 @@ import express from "express";
 
 import config from "./configurations/environment.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
+import apiRoutes from "./routes/index.js";
 
 const app = express();
 
@@ -31,7 +32,7 @@ app.use(express.static("public"));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Routes will be mounted here as modules are added.
+app.use("/api/v1", apiRoutes);
 
 app.use(errorMiddleware);
 

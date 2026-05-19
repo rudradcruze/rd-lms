@@ -34,7 +34,7 @@ const serverShutdown = async (signal) => {
 
         process.exit(0);
     } catch (error) {
-        logger.error("Server Shutdown failed:", error);
+        logger.error(error, "Server Shutdown failed:");
 
         process.exit(1);
     }
@@ -53,12 +53,12 @@ const startServer = async () => {
 
         // HTTP Server Error Handling
         server.on("error", (error) => {
-            logger.error("Server Error:", error);
+            logger.error(error, "Server Error:");
 
             process.exit(1);
         });
     } catch (error) {
-        logger.error("Application Startup Failed:", error);
+        logger.error(error, "Application Startup Failed:");
 
         process.exit(1);
     }
