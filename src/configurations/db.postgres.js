@@ -1,5 +1,6 @@
 import { Sequelize } from "sequelize";
 import config from "./environment.js";
+import logger from "./logger.js";
 
 const sequelize = new Sequelize(
     config.postgres.name,
@@ -34,11 +35,11 @@ export const connectPostgres = async () => {
     try {
         await sequelize.authenticate();
 
-        console.log("PostgreSQL Connected");
+        logger.info("PostgreSQL Connected");
     } catch (error) {
-        console.error("PostgreSQL Connection Failed");
+        logger.error("PostgreSQL Connection Failed");
 
-        console.error(error.message);
+        logger.error(error.message);
 
         process.exit(1);
     }

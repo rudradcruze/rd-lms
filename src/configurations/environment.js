@@ -9,6 +9,8 @@ const requiredEnvVariables = [
 
     "REDIS_HOST",
     "REDIS_PORT",
+
+    "ALLOWED_ORIGINS",
 ];
 
 requiredEnvVariables.forEach((key) => {

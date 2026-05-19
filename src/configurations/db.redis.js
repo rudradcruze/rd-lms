@@ -1,5 +1,6 @@
 import { createClient } from "redis";
 import config from "./environment.js";
+import logger from "./logger.js";
 
 const redisClient = createClient({
     socket: {
@@ -16,28 +17,28 @@ const redisClient = createClient({
 });
 
 redisClient.on("connect", () => {
-    console.log("Redis Connecting...");
+    logger.info("Redis Connecting...");
 });
 
 redisClient.on("ready", () => {
-    console.log("Redis Connected");
+    logger.info("Redis Connected");
 });
 
 redisClient.on("error", (err) => {
-    console.error("Redis Error:", err.message);
+    logger.error("Redis Error:", err.message);
 });
 
 redisClient.on("end", () => {
-    console.log("Redis Connection Closed");
+    logger.info("Redis Connection Closed");
 });
 
 export const connectRedis = async () => {
     try {
         await redisClient.connect();
     } catch (error) {
-        console.error("Redis Connection Failed");
+        logger.error("Redis Connection Failed");
 
-        console.error(error.message);
+        logger.error(error.message);
 
         process.exit(1);
     }

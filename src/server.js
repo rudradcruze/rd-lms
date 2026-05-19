@@ -6,34 +6,35 @@ import app from "./app.js";
 import sequelize, { connectPostgres } from "./configurations/db.postgres.js";
 import redisClient, { connectRedis } from "./configurations/db.redis.js";
 
+import logger from "./configurations/logger.js";
 import { PORT } from "./constants.js";
 
 let server;
 
 const serverShutdown = async (signal) => {
-    console.log(`\n${signal} received. Server Shutting down...`);
+    logger.warn(`\n${signal} received. Server Shutting down...`);
 
     try {
         // Stop accepting new requests
         if (server) {
             server.close(() => {
-                console.log("HTTP server closed");
+                logger.info("HTTP server closed");
             });
         }
 
         // Close PostgreSQL Connection
         await sequelize.close();
-        console.log("PostgreSQL connection closed");
+        logger.info("PostgreSQL connection closed");
 
         // Close Redis Connection
         await redisClient.quit();
-        console.log("Redis connection closed");
+        logger.info("Redis connection closed");
 
-        console.log("Server Shutdown completed");
+        logger.info("Server Shutdown completed");
 
         process.exit(0);
     } catch (error) {
-        console.error("Server Shutdown failed:", error);
+        logger.error("Server Shutdown failed:", error);
 
         process.exit(1);
     }
@@ -47,17 +48,17 @@ const startServer = async () => {
 
         // Start HTTP Server
         server = app.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
+            logger.info(`Server running on port ${PORT}`);
         });
 
         // HTTP Server Error Handling
         server.on("error", (error) => {
-            console.error("Server Error:", error);
+            logger.error("Server Error:", error);
 
             process.exit(1);
         });
     } catch (error) {
-        console.error("Application Startup Failed:", error);
+        logger.error("Application Startup Failed:", error);
 
         process.exit(1);
     }
