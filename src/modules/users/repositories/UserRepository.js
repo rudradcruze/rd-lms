@@ -1,73 +1,111 @@
-import User from '../../auth/models/User.js';
-import UserRole from '../models/UserRole.js';
-import UserPermission from '../../permissions/models/UserPermission.js';
-import Role from '../../roles/models/Role.js';
-import Permission from '../../permissions/models/Permission.js';
+import prisma from "../../../configurations/db.postgres.js";
+
+const userRoleSelect = {
+    id: true,
+    roleId: true,
+    role: {
+        select: {
+            id: true,
+            name: true,
+            key: true,
+        },
+    },
+};
 
 class UserRepository {
-  async findById(id) {
-    return User.findByPk(id, {
-      attributes: { exclude: ['passwordHash'] },
-      include: [
-        {
-          model: UserRole,
-          as: 'userRoles',
-          include: [{ model: Role, as: 'role' }],
-        },
-      ],
-    });
-  }
-
-  async findByEmail(email) {
-    return User.findOne({
-      where: { email: email.toLowerCase() },
-    });
-  }
-
-  async findAll(options = {}) {
-    const { limit = 10, offset = 0, isActive } = options;
-
-    const where = {};
-    if (isActive !== undefined) {
-      where.isActive = isActive;
+    async findById(id) {
+        return prisma.user.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                isActive: true,
+                createdAt: true,
+                updatedAt: true,
+                userRoles: {
+                    select: userRoleSelect,
+                },
+            },
+        });
     }
 
-    return User.findAndCountAll({
-      where,
-      limit,
-      offset,
-      attributes: { exclude: ['passwordHash'] },
-      include: [
-        {
-          model: UserRole,
-          as: 'userRoles',
-          include: [{ model: Role, as: 'role', attributes: ['id', 'name', 'key'] }],
-        },
-      ],
-      order: [['createdAt', 'DESC']],
-    });
-  }
+    async findByEmail(email) {
+        return prisma.user.findFirst({
+            where: { email: email.toLowerCase() },
+            select: { id: true },
+        });
+    }
 
-  async assignRole(userId, roleId) {
-    return UserRole.create({ userId, roleId });
-  }
+    async findAll(options = {}) {
+        const { limit = 10, offset = 0, isActive } = options;
 
-  async removeRole(userId, roleId) {
-    await UserRole.destroy({ where: { userId, roleId } });
-  }
+        const where = {};
+        if (isActive !== undefined) {
+            where.isActive = isActive;
+        }
 
-  async grantPermission(userId, permissionId, allowed = true) {
-    return UserPermission.create({ userId, permissionId, allowed });
-  }
+        const [count, rows] = await Promise.all([
+            prisma.user.count({ where }),
+            prisma.user.findMany({
+                where,
+                skip: offset,
+                take: limit,
+                select: {
+                    id: true,
+                    username: true,
+                    email: true,
+                    isActive: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    userRoles: {
+                        select: userRoleSelect,
+                    },
+                },
+                orderBy: { createdAt: "desc" },
+            }),
+        ]);
 
-  async revokePermission(userId, permissionId) {
-    await UserPermission.destroy({ where: { userId, permissionId } });
-  }
+        return { rows, count };
+    }
 
-  async hasRole(userId, roleId) {
-    const record = await UserRole.findOne({ where: { userId, roleId } });
-    return !!record;
-  }
+    async assignRole(userId, roleId) {
+        return prisma.userRole.create({
+            data: { userId, roleId },
+        });
+    }
+
+    async removeRole(userId, roleId) {
+        await prisma.userRole.deleteMany({
+            where: { userId, roleId },
+        });
+    }
+
+    async grantPermission(userId, permissionId, allowed = true) {
+        return prisma.userPermission.upsert({
+            where: {
+                userId_permissionId: {
+                    userId,
+                    permissionId,
+                },
+            },
+            create: { userId, permissionId, allowed },
+            update: { allowed },
+        });
+    }
+
+    async revokePermission(userId, permissionId) {
+        await prisma.userPermission.deleteMany({
+            where: { userId, permissionId },
+        });
+    }
+
+    async hasRole(userId, roleId) {
+        const record = await prisma.userRole.findFirst({
+            where: { userId, roleId },
+        });
+        return !!record;
+    }
 }
 
 export default new UserRepository();

@@ -1,61 +1,57 @@
-import RefreshToken from '../models/RefreshToken.js';
+import prisma from "../../../configurations/db.postgres.js";
 
 class RefreshTokenRepository {
-  async create(userId, tokenHash, expiresAt) {
-    return RefreshToken.create({
-      userId,
-      tokenHash,
-      expiresAt,
-    });
-  }
+    async create(userId, tokenHash, expiresAt) {
+        return prisma.refreshToken.create({
+            userId,
+            tokenHash,
+            expiresAt,
+        });
+    }
 
-  async findByTokenHash(tokenHash) {
-    return RefreshToken.findOne({
-      where: { tokenHash },
-    });
-  }
+    async findByTokenHash(tokenHash) {
+        return prisma.refreshToken.findFirst({
+            where: { tokenHash },
+        });
+    }
 
-  async findValidByUser(userId) {
-    return RefreshToken.findAll({
-      where: {
-        userId,
-        blacklistedAt: null,
-        expiresAt: {
-          [RefreshToken.sequelize.Op.gt]: new Date(),
-        },
-      },
-      order: [['createdAt', 'DESC']],
-    });
-  }
+    async findValidByUser(userId) {
+        return prisma.refreshToken.findMany({
+            where: {
+                userId,
+                blacklistedAt: null,
+                expiresAt: { gt: new Date() },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+    }
 
-  async invalidateToken(tokenId) {
-    await RefreshToken.update(
-      { blacklistedAt: new Date() },
-      { where: { id: tokenId } }
-    );
-  }
+    async invalidateToken(tokenId) {
+        await prisma.refreshToken.update({
+            where: { id: tokenId },
+            data: { blacklistedAt: new Date() },
+        });
+    }
 
-  async invalidateAllUserTokens(userId) {
-    await RefreshToken.update(
-      { blacklistedAt: new Date() },
-      {
-        where: {
-          userId,
-          blacklistedAt: null,
-        },
-      }
-    );
-  }
+    async invalidateAllUserTokens(userId) {
+        await prisma.refreshToken.updateMany({
+            where: {
+                userId,
+                blacklistedAt: null,
+            },
+            data: { blacklistedAt: new Date() },
+        });
+    }
 
-  async deleteExpiredTokens() {
-    await RefreshToken.destroy({
-      where: {
-        expiresAt: {
-          [RefreshToken.sequelize.Op.lt]: new Date(),
-        },
-      },
-    });
-  }
+    async deleteExpiredTokens() {
+        await prisma.refreshToken.deleteMany({
+            where: {
+                expiresAt: {
+                    lt: new Date(),
+                },
+            },
+        });
+    }
 }
 
 export default new RefreshTokenRepository();

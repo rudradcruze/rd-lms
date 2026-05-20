@@ -1,76 +1,93 @@
-import Role from '../models/Role.js';
-import RolePermission from '../../permissions/models/RolePermission.js';
-import Permission from '../../permissions/models/Permission.js';
+import prisma from "../../../configurations/db.postgres.js";
+
+const rolePermissionSelect = {
+    id: true,
+    permissionId: true,
+    permission: {
+        select: {
+            id: true,
+            key: true,
+            name: true,
+            resource: true,
+            action: true,
+        },
+    },
+};
 
 class RoleRepository {
-  async create(roleData) {
-    return Role.create(roleData);
-  }
+    async create(roleData) {
+        return prisma.role.create({
+            data: roleData,
+        });
+    }
 
-  async findById(id) {
-    return Role.findByPk(id, {
-      include: [
-        {
-          model: RolePermission,
-          as: 'rolePermissions',
-          include: [
-            {
-              model: Permission,
-              as: 'permission',
-              attributes: ['id', 'key', 'name', 'resource', 'action'],
+    async findById(id) {
+        return prisma.role.findUnique({
+            where: { id },
+            include: {
+                rolePermissions: {
+                    select: rolePermissionSelect,
+                },
             },
-          ],
-        },
-      ],
-    });
-  }
+        });
+    }
 
-  async findByKey(key) {
-    return Role.findOne({ where: { key } });
-  }
+    async findByKey(key) {
+        return prisma.role.findFirst({ where: { key } });
+    }
 
-  async findAll(options = {}) {
-    const { limit = 10, offset = 0 } = options;
+    async findAll(options = {}) {
+        const { limit = 10, offset = 0 } = options;
 
-    return Role.findAndCountAll({
-      limit,
-      offset,
-      include: [
-        {
-          model: RolePermission,
-          as: 'rolePermissions',
-          attributes: ['id'],
-        },
-      ],
-      order: [['createdAt', 'DESC']],
-    });
-  }
+        const [count, rows] = await Promise.all([
+            prisma.role.count(),
+            prisma.role.findMany({
+                skip: offset,
+                take: limit,
+                include: {
+                    rolePermissions: {
+                        select: {
+                            id: true,
+                        },
+                    },
+                },
+                orderBy: { createdAt: "desc" },
+            }),
+        ]);
 
-  async update(roleId, roleData) {
-    await Role.update(roleData, { where: { id: roleId } });
-    return this.findById(roleId);
-  }
+        return { rows, count };
+    }
 
-  async delete(roleId) {
-    await Role.destroy({ where: { id: roleId } });
-  }
+    async update(roleId, roleData) {
+        await prisma.role.update({
+            where: { id: roleId },
+            data: roleData,
+        });
+        return this.findById(roleId);
+    }
 
-  async assignPermission(roleId, permissionId) {
-    return RolePermission.create({ roleId, permissionId });
-  }
+    async delete(roleId) {
+        await prisma.role.delete({ where: { id: roleId } });
+    }
 
-  async revokePermission(roleId, permissionId) {
-    await RolePermission.destroy({
-      where: { roleId, permissionId },
-    });
-  }
+    async assignPermission(roleId, permissionId) {
+        return prisma.rolePermission.create({
+            data: { roleId, permissionId },
+        });
+    }
 
-  async hasPermission(roleId, permissionId) {
-    const record = await RolePermission.findOne({
-      where: { roleId, permissionId },
-    });
-    return !!record;
-  }
+    async revokePermission(roleId, permissionId) {
+        await prisma.rolePermission.deleteMany({
+            where: { roleId, permissionId },
+        });
+    }
+
+    async hasPermission(roleId, permissionId) {
+        const record = await prisma.rolePermission.findFirst({
+            where: { roleId, permissionId },
+        });
+        return !!record;
+    }
 }
 
 export default new RoleRepository();

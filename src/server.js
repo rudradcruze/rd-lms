@@ -3,7 +3,7 @@ dotenv.config();
 
 import app from "./app.js";
 
-import sequelize, { connectPostgres } from "./configurations/db.postgres.js";
+import prisma, { connectPostgres } from "./configurations/db.postgres.js";
 import redisClient, { connectRedis } from "./configurations/db.redis.js";
 
 import logger from "./configurations/logger.js";
@@ -23,7 +23,7 @@ const serverShutdown = async (signal) => {
         }
 
         // Close PostgreSQL Connection
-        await sequelize.close();
+        await prisma.$disconnect();
         logger.info("PostgreSQL connection closed");
 
         // Close Redis Connection

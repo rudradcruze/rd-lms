@@ -1,36 +1,48 @@
-import Permission from '../models/Permission.js';
+import prisma from "../../../configurations/db.postgres.js";
 
 class PermissionRepository {
-  async create(permissionData) {
-    return Permission.create(permissionData);
-  }
+    async create(permissionData) {
+        return prisma.permission.create({
+            data: permissionData,
+        });
+    }
 
-  async findById(id) {
-    return Permission.findByPk(id);
-  }
+    async findById(id) {
+        return prisma.permission.findUnique({
+            where: { id },
+        });
+    }
 
-  async findByKey(key) {
-    return Permission.findOne({ where: { key } });
-  }
+    async findByKey(key) {
+        return prisma.permission.findFirst({ where: { key } });
+    }
 
-  async findAll(options = {}) {
-    const { limit = 100, offset = 0 } = options;
+    async findAll(options = {}) {
+        const { limit = 100, offset = 0 } = options;
 
-    return Permission.findAndCountAll({
-      limit,
-      offset,
-      order: [['resource', 'ASC'], ['action', 'ASC']],
-    });
-  }
+        const [count, rows] = await Promise.all([
+            prisma.permission.count(),
+            prisma.permission.findMany({
+                skip: offset,
+                take: limit,
+                orderBy: [{ resource: "asc" }, { action: "asc" }],
+            }),
+        ]);
 
-  async update(permissionId, permissionData) {
-    await Permission.update(permissionData, { where: { id: permissionId } });
-    return this.findById(permissionId);
-  }
+        return { rows, count };
+    }
 
-  async delete(permissionId) {
-    await Permission.destroy({ where: { id: permissionId } });
-  }
+    async update(permissionId, permissionData) {
+        await prisma.permission.update({
+            where: { id: permissionId },
+            data: permissionData,
+        });
+        return this.findById(permissionId);
+    }
+
+    async delete(permissionId) {
+        await prisma.permission.delete({ where: { id: permissionId } });
+    }
 }
 
 export default new PermissionRepository();

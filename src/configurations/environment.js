@@ -1,11 +1,6 @@
 const requiredEnvVariables = [
     "PORT",
-
-    "DB_HOST",
-    "DB_PORT",
-    "DB_NAME",
-    "DB_USER",
-    "DB_PASSWORD",
+    "DATABASE_URL",
 
     "REDIS_HOST",
     "REDIS_PORT",
@@ -26,11 +21,7 @@ const config = {
     },
 
     postgres: {
-        host: process.env.DB_HOST,
-        port: Number(process.env.DB_PORT),
-        name: process.env.DB_NAME,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
+        url: process.env.DATABASE_URL,
     },
 
     redis: {

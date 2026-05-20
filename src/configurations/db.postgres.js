@@ -1,39 +1,24 @@
-import { Sequelize } from "sequelize";
+import { PrismaClient } from "@prisma/client";
 import config from "./environment.js";
 import logger from "./logger.js";
 
-const sequelize = new Sequelize(
-    config.postgres.name,
-    config.postgres.user,
-    config.postgres.password,
-    {
-        host: config.postgres.host,
-        port: config.postgres.port,
-        dialect: "postgres",
-
-        logging: false,
-
-        pool: {
-            max: 20,
-            min: 2,
-            acquire: 30000,
-            idle: 10000,
+const prisma =
+    globalThis.__prismaClient ||
+    new PrismaClient({
+        datasources: {
+            db: {
+                url: config.postgres.url,
+            },
         },
+    });
 
-        dialectOptions: {
-            connectTimeout: 30000,
-        },
-
-        define: {
-            timestamps: true,
-            underscored: true,
-        },
-    }
-);
+if (config.app.environment !== "production") {
+    globalThis.__prismaClient = prisma;
+}
 
 export const connectPostgres = async () => {
     try {
-        await sequelize.authenticate();
+        await prisma.$connect();
 
         logger.info("PostgreSQL Connected");
     } catch (error) {
@@ -45,4 +30,4 @@ export const connectPostgres = async () => {
     }
 };
 
-export default sequelize;
+export default prisma;

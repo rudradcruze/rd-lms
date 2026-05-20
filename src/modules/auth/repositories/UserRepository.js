@@ -1,82 +1,134 @@
-import User from '../models/User.js';
+import prisma from "../../../configurations/db.postgres.js";
+
+const publicUserSelect = {
+    id: true,
+    username: true,
+    email: true,
+    isActive: true,
+    createdAt: true,
+    updatedAt: true,
+    userRoles: {
+        select: {
+            id: true,
+            roleId: true,
+            createdAt: true,
+            updatedAt: true,
+            role: {
+                select: {
+                    id: true,
+                    name: true,
+                    key: true,
+                    description: true,
+                    createdAt: true,
+                    updatedAt: true,
+                },
+            },
+        },
+    },
+};
+
+const authUserSelect = {
+    id: true,
+    username: true,
+    email: true,
+    passwordHash: true,
+    isActive: true,
+    createdAt: true,
+    updatedAt: true,
+};
 
 class UserRepository {
-  async findById(id) {
-    return User.findByPk(id, {
-      attributes: { exclude: ['passwordHash'] },
-    });
-  }
+    async findById(id, options = {}) {
+        const { includePasswordHash = false } = options;
 
-  async findByEmail(email) {
-    return User.findOne({
-      where: { email: email.toLowerCase() },
-    });
-  }
-
-  async findByUsername(username) {
-    return User.findOne({
-      where: { username },
-    });
-  }
-
-  async findByEmailOrUsername(identifier) {
-    return User.findOne({
-      where: {
-        [User.sequelize.Op.or]: [
-          { email: identifier.toLowerCase() },
-          { username: identifier },
-        ],
-      },
-    });
-  }
-
-  async create(userData) {
-    const user = await User.create({
-      username: userData.username,
-      email: userData.email.toLowerCase(),
-      passwordHash: userData.password,
-    });
-
-    return this.findById(user.id);
-  }
-
-  async update(userId, userData) {
-    await User.update(userData, {
-      where: { id: userId },
-    });
-
-    return this.findById(userId);
-  }
-
-  async findAll(options = {}) {
-    const { limit = 10, offset = 0, isActive } = options;
-
-    const where = {};
-    if (isActive !== undefined) {
-      where.isActive = isActive;
+        return prisma.user.findUnique({
+            where: { id },
+            select: includePasswordHash ? authUserSelect : publicUserSelect,
+        });
     }
 
-    const { rows, count } = await User.findAndCountAll({
-      where,
-      limit,
-      offset,
-      attributes: { exclude: ['passwordHash'] },
-      order: [['createdAt', 'DESC']],
-    });
+    async findByEmail(email) {
+        return prisma.user.findFirst({
+            where: { email: email.toLowerCase() },
+            select: { id: true },
+        });
+    }
 
-    return { rows, count };
-  }
+    async findByUsername(username) {
+        return prisma.user.findFirst({
+            where: { username },
+            select: { id: true },
+        });
+    }
 
-  async changePassword(userId, newPassword) {
-    await User.update(
-      { passwordHash: newPassword },
-      { where: { id: userId } }
-    );
-  }
+    async findByEmailOrUsername(identifier) {
+        return prisma.user.findFirst({
+            where: {
+                OR: [
+                    { email: identifier.toLowerCase() },
+                    { username: identifier },
+                ],
+            },
+            select: authUserSelect,
+        });
+    }
 
-  async delete(userId) {
-    await User.destroy({ where: { id: userId } });
-  }
+    async create(userData) {
+        const user = await prisma.user.create({
+            username: userData.username,
+            email: userData.email.toLowerCase(),
+            passwordHash: userData.passwordHash,
+        });
+
+        return this.findById(user.id);
+    }
+
+    async update(userId, userData) {
+        await prisma.user.update({
+            where: { id: userId },
+            data: {
+                ...userData,
+                ...(userData.email
+                    ? { email: userData.email.toLowerCase() }
+                    : {}),
+            },
+        });
+
+        return this.findById(userId);
+    }
+
+    async findAll(options = {}) {
+        const { limit = 10, offset = 0, isActive } = options;
+
+        const where = {};
+        if (isActive !== undefined) {
+            where.isActive = isActive;
+        }
+
+        const [count, rows] = await Promise.all([
+            prisma.user.count({ where }),
+            prisma.user.findMany({
+                where,
+                skip: offset,
+                take: limit,
+                select: publicUserSelect,
+                orderBy: { createdAt: "desc" },
+            }),
+        ]);
+
+        return { rows, count };
+    }
+
+    async changePassword(userId, newPassword) {
+        await prisma.user.update({
+            where: { id: userId },
+            data: { passwordHash: newPassword },
+        });
+    }
+
+    async delete(userId) {
+        await prisma.user.delete({ where: { id: userId } });
+    }
 }
 
 export default new UserRepository();
