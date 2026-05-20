@@ -6,6 +6,8 @@ const requiredEnvVariables = [
     "REDIS_PORT",
 
     "ALLOWED_ORIGINS",
+    "JWT_ACCESS_SECRET",
+    "JWT_REFRESH_SECRET",
 ];
 
 requiredEnvVariables.forEach((key) => {
