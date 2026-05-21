@@ -301,4 +301,39 @@ describe("Auth API", () => {
             expect(res.status).toBe(400);
         });
     });
+
+    // ── Global Exception & Route Fallbacks ───────────────────────────────────
+    describe("Global Exception & Route Fallbacks", () => {
+        it("should return 404 with standard ApiError JSON structure for a broken URL", async () => {
+            const res = await request.get("/api/v1/non-existent-endpoint-xyz");
+            expect(res.status).toBe(404);
+            expect(res.body).toHaveProperty("success", false);
+            expect(res.body).toHaveProperty("statusCode", 404);
+            expect(res.body).toHaveProperty("message");
+            expect(res.body.message).toContain("Route not found");
+            expect(Array.isArray(res.body.errors)).toBe(true);
+        });
+
+        it("should return 404 with standard ApiError JSON structure for an unsupported HTTP method", async () => {
+            // GET is not supported on /api/v1/auth/access, only POST
+            const res = await request.get("/api/v1/auth/access");
+            expect(res.status).toBe(404);
+            expect(res.body).toHaveProperty("success", false);
+            expect(res.body).toHaveProperty("statusCode", 404);
+            expect(res.body.message).toContain("Route not found");
+            expect(Array.isArray(res.body.errors)).toBe(true);
+        });
+
+        it("should return 400 with standard ApiError JSON structure for malformed JSON request body", async () => {
+            const res = await request
+                .post("/api/v1/auth/login")
+                .set("Content-Type", "application/json")
+                .send("{invalidjson}");
+            expect(res.status).toBe(400);
+            expect(res.body).toHaveProperty("success", false);
+            expect(res.body).toHaveProperty("statusCode", 400);
+            expect(res.body).toHaveProperty("message");
+            expect(Array.isArray(res.body.errors)).toBe(true);
+        });
+    });
 });

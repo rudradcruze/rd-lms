@@ -6,7 +6,9 @@ const errorMiddleware = (err, req, res, next) => {
     let error = err;
 
     if (!(error instanceof ApiError)) {
-        error = new ApiError(500, error?.message || "Internal Server Error");
+        const statusCode = error?.statusCode || error?.status || 500;
+        const message = error?.message || "Internal Server Error";
+        error = new ApiError(statusCode, message, [], error?.stack || "");
     }
 
     logger.error({
