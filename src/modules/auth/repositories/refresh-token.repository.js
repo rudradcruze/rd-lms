@@ -35,6 +35,13 @@ class RefreshTokenRepository {
         });
     }
 
+    async invalidateTokenByHash(tokenHash) {
+        await prisma.refreshToken.update({
+            where: { tokenHash },
+            data: { blacklistedAt: new Date() },
+        });
+    }
+
     async invalidateAllUserTokens(userId) {
         await prisma.refreshToken.updateMany({
             where: {

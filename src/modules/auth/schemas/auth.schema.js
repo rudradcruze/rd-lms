@@ -57,3 +57,23 @@ export const passwordResetSchema = z.object({
             .min(8, "Password must be at least 8 characters"),
     }),
 });
+
+export const checkAvailabilitySchema = z.object({
+    query: z
+        .object({
+            username: z
+                .string()
+                .min(4, "Username must be at least 4 characters")
+                .max(16, "Username must be at most 16 characters")
+                .regex(
+                    /^[a-zA-Z0-9_.]+$/,
+                    "Username can only contain letters, numbers, dots, and underscores"
+                )
+                .optional(),
+            email: z.string().email("Please provide a valid email address").optional(),
+        })
+        .refine((data) => data.username !== undefined || data.email !== undefined, {
+            message: "Either username or email must be provided for availability checking",
+            path: ["username"],
+        }),
+});

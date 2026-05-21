@@ -1,13 +1,16 @@
 import { Router } from "express";
 import { authenticate } from "../../../middlewares/authenticate.middleware.js";
 import { authorize } from "../../../middlewares/authorize.middleware.js";
+import { permission } from "../../../middlewares/permission.middleware.js";
 import validate from "../../../middlewares/validate.middleware.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import UserController from "../controllers/user.controller.js";
 import {
     assignRoleSchema,
     grantPermissionSchema,
+    onboardUserSchema,
 } from "../schemas/user.schema.js";
+
 
 const router = Router();
 
@@ -48,6 +51,60 @@ router.get(
     authorize(["admin", "super_admin"]),
     asyncHandler((req, res) => UserController.getAllUsers(req, res))
 );
+
+/**
+ * @swagger
+ * /users:
+ *   post:
+ *     summary: Onboard a user (requires users.create permission)
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [username, email, pass, firstname, lastname, role]
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: Unique username (4-16 chars, alphanumeric/dots/underscores)
+ *               email:
+ *                 type: string
+ *                 description: Unique email address
+ *               pass:
+ *                 type: string
+ *                 description: Password (min 8 chars)
+ *               firstname:
+ *                 type: string
+ *                 description: First name of the user
+ *               lastname:
+ *                 type: string
+ *                 description: Last name of the user
+ *               role:
+ *                 type: string
+ *                 description: Role key (e.g., "instructor", "admin", "student") or Role UUID. Note that assigning the "super_admin" role is not allowed.
+ *     responses:
+ *       201:
+ *         description: User onboarded successfully
+ *       400:
+ *         description: Invalid input parameters
+ *       401:
+ *         description: Unauthorized (missing or invalid token)
+ *       403:
+ *         description: Forbidden (insufficient permissions, or attempting to onboard super_admin)
+ *       409:
+ *         description: Conflict (username or email already registered)
+ */
+router.post(
+    "/",
+    permission(["users.create"]),
+    validate(onboardUserSchema),
+    asyncHandler((req, res) => UserController.onboardUser(req, res))
+);
+
 
 /**
  * @swagger
@@ -226,6 +283,17 @@ router.delete(
  *         required: true
  *         schema: { type: string }
  *         description: User UUID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [permissionId]
+ *             properties:
+ *               permissionId:
+ *                 type: string
+ *                 description: Permission UUID or key
  */
 router.post(
     "/:userId/permissions",

@@ -1,5 +1,6 @@
 import prisma from "../../../configurations/db.postgres.js";
 import redisClient from "../../../configurations/db.redis.js";
+import logger from "../../../configurations/logger.js";
 
 class PermissionResolverService {
     /**
@@ -13,10 +14,16 @@ class PermissionResolverService {
     async resolveUserPermissions(userId) {
         // Check Redis cache first
         const cacheKey = `user:${userId}:permissions`;
-        const cached = await redisClient.get(cacheKey);
+        let cached = null;
+        try {
+            cached = await redisClient.get(cacheKey);
+        } catch (error) {
+            logger.warn(`Permission cache check skipped due to Redis error: ${error.message}`);
+        }
         if (cached) {
             return JSON.parse(cached);
         }
+
 
         // Step 1: Check if user is super_admin
         const superAdminRole = await prisma.role.findFirst({
@@ -50,9 +57,13 @@ class PermissionResolverService {
                 };
 
                 // Cache for 1 hour
-                await redisClient.set(cacheKey, JSON.stringify(result), {
-                    EX: 3600,
-                });
+                try {
+                    await redisClient.set(cacheKey, JSON.stringify(result), {
+                        EX: 3600,
+                    });
+                } catch (error) {
+                    logger.warn(`Permission cache write failed due to Redis error: ${error.message}`);
+                }
                 return result;
             }
         }
@@ -133,7 +144,11 @@ class PermissionResolverService {
         };
 
         // Cache for 1 hour
-        await redisClient.set(cacheKey, JSON.stringify(result), { EX: 3600 });
+        try {
+            await redisClient.set(cacheKey, JSON.stringify(result), { EX: 3600 });
+        } catch (error) {
+            logger.warn(`Permission cache write failed due to Redis error: ${error.message}`);
+        }
         return result;
     }
 
@@ -170,7 +185,11 @@ class PermissionResolverService {
      */
     async invalidateUserCache(userId) {
         const cacheKey = `user:${userId}:permissions`;
-        await redisClient.del(cacheKey);
+        try {
+            await redisClient.del(cacheKey);
+        } catch (error) {
+            logger.warn(`Permission cache invalidation failed due to Redis error: ${error.message}`);
+        }
     }
 
     /**
@@ -184,11 +203,15 @@ class PermissionResolverService {
 
         if (usersWithRole.length === 0) return;
 
-        const pipeline = redisClient.multi();
-        for (const { userId } of usersWithRole) {
-            pipeline.del(`user:${userId}:permissions`);
+        try {
+            const pipeline = redisClient.multi();
+            for (const { userId } of usersWithRole) {
+                pipeline.del(`user:${userId}:permissions`);
+            }
+            await pipeline.exec();
+        } catch (error) {
+            logger.warn(`Permission cache role invalidation failed due to Redis error: ${error.message}`);
         }
-        await pipeline.exec();
     }
 }
 

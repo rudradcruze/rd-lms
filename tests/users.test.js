@@ -26,7 +26,7 @@ describe("Users API", () => {
 
         // Get student user ID matching the credentials used for studentToken
         const usersRes = await request
-            .get("/api/v1/users?role=student&limit=10")
+            .get("/api/v1/users?role=student&limit=100")
             .set("Authorization", `Bearer ${superAdminToken}`);
         const student = usersRes.body.data.users.find(
             (u) => u.email === CREDS.student.email
@@ -258,4 +258,178 @@ describe("Users API", () => {
             expect(res.status).toBe(200);
         });
     });
+
+    // ── User Onboarding ───────────────────────────────────────────────────────
+    describe("POST /api/v1/users (Administrative Onboarding)", () => {
+        let uniqueId = 0;
+        const nextUser = () => {
+            uniqueId += 1;
+            const rand = Math.floor(Math.random() * 100000);
+            return {
+                username: `onb_${uniqueId}_${rand}`.substring(0, 16),
+                email: `onboard_${uniqueId}_${rand}@rd-lms.com`,
+                pass: "StrongPassword123!",
+                firstname: "First",
+                lastname: "Last",
+            };
+        };
+
+
+        it("super_admin can successfully onboard an instructor", async () => {
+            const userData = nextUser();
+            const res = await request
+                .post("/api/v1/users")
+                .set("Authorization", `Bearer ${superAdminToken}`)
+                .send({
+                    ...userData,
+                    role: "instructor",
+                });
+
+            expect(res.status).toBe(201);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.username).toBe(userData.username);
+            expect(res.body.data.email).toBe(userData.email.toLowerCase());
+            
+            const roles = res.body.data.userRoles.map((ur) => ur.role.key);
+            expect(roles).toContain("instructor");
+            expect(res.body.data.userInfo.firstName).toBe(userData.firstname);
+            expect(res.body.data.userInfo.lastName).toBe(userData.lastname);
+            expect(res.body.data).not.toHaveProperty("passwordHash");
+            expect(res.body.data).not.toHaveProperty("password");
+        });
+
+        it("super_admin can successfully onboard an admin", async () => {
+            const userData = nextUser();
+            const res = await request
+                .post("/api/v1/users")
+                .set("Authorization", `Bearer ${superAdminToken}`)
+                .send({
+                    ...userData,
+                    role: "admin",
+                });
+
+            expect(res.status).toBe(201);
+            expect(res.body.data.username).toBe(userData.username);
+            const roles = res.body.data.userRoles.map((ur) => ur.role.key);
+            expect(roles).toContain("admin");
+        });
+
+        it("admin can successfully onboard a student", async () => {
+            const userData = nextUser();
+            const res = await request
+                .post("/api/v1/users")
+                .set("Authorization", `Bearer ${adminToken}`)
+                .send({
+                    ...userData,
+                    role: "student",
+                });
+
+            expect(res.status).toBe(201);
+            expect(res.body.data.username).toBe(userData.username);
+            const roles = res.body.data.userRoles.map((ur) => ur.role.key);
+            expect(roles).toContain("student");
+        });
+
+        it("student cannot onboard a user (403)", async () => {
+            const userData = nextUser();
+            const res = await request
+                .post("/api/v1/users")
+                .set("Authorization", `Bearer ${studentToken}`)
+                .send({
+                    ...userData,
+                    role: "student",
+                });
+
+            expect(res.status).toBe(403);
+            expect(res.body.message).toMatch(/insufficient permissions/i);
+        });
+
+        it("returns 400 for validation errors (missing fields)", async () => {
+            const res = await request
+                .post("/api/v1/users")
+                .set("Authorization", `Bearer ${superAdminToken}`)
+                .send({
+                    username: "test",
+                });
+
+            expect(res.status).toBe(400);
+        });
+
+        it("returns 409 Conflict if email is already taken", async () => {
+            const userData = nextUser();
+            
+            await request
+                .post("/api/v1/users")
+                .set("Authorization", `Bearer ${superAdminToken}`)
+                .send({
+                    ...userData,
+                    role: "student",
+                });
+
+            const res = await request
+                .post("/api/v1/users")
+                .set("Authorization", `Bearer ${superAdminToken}`)
+                .send({
+                    ...userData,
+                    username: `diff${userData.username}`.substring(0, 15),
+                    role: "student",
+                });
+
+            expect(res.status).toBe(409);
+            expect(res.body.message).toMatch(/email.*registered/i);
+        });
+
+        it("returns 409 Conflict if username is already taken", async () => {
+            const userData = nextUser();
+            
+            await request
+                .post("/api/v1/users")
+                .set("Authorization", `Bearer ${superAdminToken}`)
+                .send({
+                    ...userData,
+                    role: "student",
+                });
+
+            const res = await request
+                .post("/api/v1/users")
+                .set("Authorization", `Bearer ${superAdminToken}`)
+                .send({
+                    ...userData,
+                    email: `diff${userData.email}`,
+                    role: "student",
+                });
+
+            expect(res.status).toBe(409);
+            expect(res.body.message).toMatch(/username.*taken/i);
+        });
+
+        it("prevents onboarding super_admin role (403)", async () => {
+            const userData = nextUser();
+            const res = await request
+                .post("/api/v1/users")
+                .set("Authorization", `Bearer ${superAdminToken}`)
+                .send({
+                    ...userData,
+                    role: "super_admin",
+                });
+
+            expect(res.status).toBe(403);
+            expect(res.body.message).toMatch(/super_admin/i);
+        });
+
+        it("returns 404 for non-existent role", async () => {
+            const userData = nextUser();
+            const res = await request
+                .post("/api/v1/users")
+                .set("Authorization", `Bearer ${superAdminToken}`)
+                .send({
+                    ...userData,
+                    role: "non_existent_role_key_abc",
+                });
+
+            expect(res.status).toBe(404);
+            expect(res.body.message).toMatch(/role not found/i);
+        });
+    });
 });
+

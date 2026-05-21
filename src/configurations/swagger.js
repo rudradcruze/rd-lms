@@ -1,6 +1,7 @@
 import swaggerJSDoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 import { PORT } from "../constants.js";
+import logger from "./logger.js";
 
 const options = {
     definition: {
@@ -43,6 +44,7 @@ const options = {
                     type: "object",
                     properties: {
                         success: { type: "boolean", example: false },
+                        statusCode: { type: "integer", example: 400 },
                         message: { type: "string", example: "Error occurred" },
                         errors: {
                             type: "array",
@@ -85,7 +87,7 @@ const options = {
             "/auth/register": {
                 post: {
                     summary: "Register a new user",
-                    description: "Allows visitors to register a new LMS account. Limits registration requests to 10 per hour per IP address.",
+                    description: "Allows visitors to register a new LMS account. Registering a new user dynamically assigns the 'student' role by default. All other roles (such as instructor, admin) must be onboarded administratively by authorized users. Limits registration requests to 10 per hour per IP address.",
                     tags: ["Authentication"],
                     security: [],
                     requestBody: {
@@ -108,7 +110,7 @@ const options = {
                     },
                     responses: {
                         201: {
-                            description: "User registered successfully",
+                            description: "User registered successfully with default 'student' role",
                             content: {
                                 "application/json": {
                                     schema: {
@@ -126,7 +128,7 @@ const options = {
             "/auth/login": {
                 post: {
                     summary: "Authenticate user and issue tokens",
-                    description: "Logs a user in using email/username and password. Rotates sessions using dynamic token pairs.",
+                    description: "Logs a user in using email/username and password. Rotates sessions using dynamic token pairs. Caches active credential lookups in Redis.",
                     tags: ["Authentication"],
                     security: [],
                     requestBody: {
@@ -175,7 +177,7 @@ const options = {
             "/auth/refresh": {
                 post: {
                     summary: "Refresh access token",
-                    description: "Generates a fresh access/refresh token pair using a valid, non-blacklisted refresh token.",
+                    description: "Generates a fresh access/refresh token pair using a valid, non-blacklisted refresh token. Optimizes performance using a Redis cache-aside design to bypass PostgreSQL queries in O(1) time. Outages fail-soft back to database lookups.",
                     tags: ["Authentication"],
                     security: [],
                     requestBody: {
@@ -193,15 +195,60 @@ const options = {
                         },
                     },
                     responses: {
-                        200: { description: "Token refreshed successfully" },
-                        401: { description: "Invalid or blacklisted refresh token" },
+                        200: { description: "Token refreshed successfully with performance-optimized rotation" },
+                        401: { description: "Invalid, rotated, or blacklisted refresh token" },
+                    },
+                },
+            },
+            "/auth/access": {
+                post: {
+                    summary: "Generate new access token",
+                    description: "Generates ONLY a new access token using a valid, non-blacklisted refresh token without rotating or invalidating the refresh token. This provides a low-overhead path for token refreshes, utilizing high-performance Redis cache-aside lookups in O(1) time.",
+                    tags: ["Authentication"],
+                    security: [],
+                    requestBody: {
+                        required: true,
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "object",
+                                    required: ["refreshToken"],
+                                    properties: {
+                                        refreshToken: { type: "string" },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    responses: {
+                        200: {
+                            description: "New access token retrieved successfully without rotating the refresh token",
+                            content: {
+                                "application/json": {
+                                    schema: {
+                                        type: "object",
+                                        properties: {
+                                            success: { type: "boolean", example: true },
+                                            data: {
+                                                type: "object",
+                                                properties: {
+                                                    accessToken: { type: "string" },
+                                                    user: { $ref: "#/components/schemas/User" },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        401: { description: "Invalid, expired, or blacklisted refresh token" },
                     },
                 },
             },
             "/auth/logout": {
                 post: {
                     summary: "Log out user",
-                    description: "Blacklists the user's active refresh token in both PostgreSQL and Redis to end the session.",
+                    description: "Ends the active session. Blacklists the refresh token in PostgreSQL and purges the cached session from Redis in O(1) time.",
                     tags: ["Authentication"],
                     security: [{ BearerAuth: [] }],
                     requestBody: {
@@ -219,7 +266,7 @@ const options = {
                         },
                     },
                     responses: {
-                        200: { description: "Logged out successfully" },
+                        200: { description: "Logged out successfully and token cache purged" },
                         401: { description: "Unauthorized" },
                     },
                 },
@@ -227,6 +274,7 @@ const options = {
             "/auth/change-password": {
                 post: {
                     summary: "Change current password",
+                    description: "Changes the authenticated user's password. Instantly retrieves all active refresh tokens from the Redis session tracking set and pipeline-invalidates them in O(1) time, dynamically logging out all active devices.",
                     tags: ["Authentication"],
                     security: [{ BearerAuth: [] }],
                     requestBody: {
@@ -245,11 +293,86 @@ const options = {
                         },
                     },
                     responses: {
-                        200: { description: "Password changed successfully" },
+                        200: { description: "Password changed successfully and all active device sessions revoked" },
                         400: { description: "Validation error (new password matches old password)" },
                         401: { description: "Invalid old password / unauthorized" },
                     },
                 },
+            },
+            "/auth/check-availability": {
+                get: {
+                    summary: "Quick availability check for username and email",
+                    description: "Checks if a username and/or email is available (not taken). Public unauthenticated endpoint utilizing Redis cache-aside caching.",
+                    tags: ["Authentication"],
+                    security: [],
+                    parameters: [
+                        {
+                            name: "username",
+                            in: "query",
+                            description: "The username to check availability for",
+                            required: false,
+                            schema: {
+                                type: "string",
+                                minLength: 4,
+                                maxLength: 16
+                            }
+                        },
+                        {
+                            name: "email",
+                            in: "query",
+                            description: "The email address to check availability for",
+                            required: false,
+                            schema: {
+                                type: "string",
+                                format: "email"
+                            }
+                        }
+                    ],
+                    responses: {
+                        200: {
+                            description: "Availability check status retrieved successfully",
+                            content: {
+                                "application/json": {
+                                    schema: {
+                                        type: "object",
+                                        properties: {
+                                            success: { type: "boolean", example: true },
+                                            statusCode: { type: "integer", example: 200 },
+                                            message: { type: "string", example: "Availability check completed successfully" },
+                                            data: {
+                                                type: "object",
+                                                properties: {
+                                                    username: {
+                                                        type: "object",
+                                                        properties: {
+                                                            available: { type: "boolean", example: true }
+                                                        }
+                                                    },
+                                                    email: {
+                                                        type: "object",
+                                                        properties: {
+                                                            available: { type: "boolean", example: false }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        400: {
+                            description: "Input Validation Error",
+                            content: {
+                                "application/json": {
+                                    schema: {
+                                        $ref: "#/components/schemas/ApiError"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             },
         },
     },
@@ -264,5 +387,5 @@ const swaggerSpec = swaggerJSDoc(options);
 
 export const setupSwagger = (app) => {
     app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-    console.log("📘 Swagger API Docs available at /api-docs");
+    logger.info("📘 Swagger API Docs available at /api-docs");
 };

@@ -19,6 +19,7 @@ const errorMiddleware = (err, req, res, next) => {
 
     res.status(error.statusCode).json({
         success: error.success,
+        statusCode: error.statusCode,
         message: error.message,
         errors: error.errors,
         ...(config.app.environment === "development" && {

@@ -1,4 +1,6 @@
 import redisClient from "../configurations/db.redis.js";
+import config from "../configurations/environment.js";
+import logger from "../configurations/logger.js";
 import { ApiError } from "../utils/ApiError.js";
 
 /**
@@ -12,8 +14,8 @@ export const rateLimiter = ({
     message = "Too many requests, please try again later.",
 } = {}) => {
     return async (req, res, next) => {
-        // Bypass rate limiting in test environment to avoid 429s during Jest execution
-        if (process.env.NODE_ENV === "test") {
+        // Bypass rate limiting in test/development environment to avoid 429s during Jest execution
+        if (config.app.environment === "test" || config.app.environment === "development") {
             return next();
         }
 
@@ -45,8 +47,14 @@ export const rateLimiter = ({
 
             next();
         } catch (error) {
-            next(error);
+            if (error instanceof ApiError) {
+                next(error);
+            } else {
+                logger.warn(`Rate limiter warning (Redis error): ${error.message}`);
+                next();
+            }
         }
+
     };
 };
 export default rateLimiter;

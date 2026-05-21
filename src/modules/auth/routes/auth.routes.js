@@ -10,6 +10,7 @@ import {
     logoutSchema,
     refreshTokenSchema,
     registerSchema,
+    checkAvailabilitySchema,
 } from "../schemas/auth.schema.js";
 
 const router = Router();
@@ -57,6 +58,12 @@ router.post(
 );
 
 router.post(
+    "/access",
+    validate(refreshTokenSchema),
+    asyncHandler((req, res) => AuthController.getAccessToken(req, res))
+);
+
+router.post(
     "/logout",
     authenticate,
     validate(logoutSchema),
@@ -69,6 +76,12 @@ router.post(
     passwordLimiter,
     validate(changePasswordSchema),
     asyncHandler((req, res) => AuthController.changePassword(req, res))
+);
+
+router.get(
+    "/check-availability",
+    validate(checkAvailabilitySchema),
+    asyncHandler((req, res) => AuthController.checkAvailability(req, res))
 );
 
 export default router;

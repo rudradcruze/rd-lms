@@ -1,9 +1,12 @@
 import { ApiError } from "../../../utils/ApiError.js";
+import redisClient from "../../../configurations/db.redis.js";
+import logger from "../../../configurations/logger.js";
 import PermissionRepository from "../../permissions/repositories/permission.repository.js";
 import PermissionResolverService from "../../permissions/services/permissionResolver.service.js";
 import RoleRepository from "../../roles/repositories/role.repository.js";
 import UserRepository from "../repositories/user.repository.js";
 import { USER_MESSAGES } from "../user.constants.js";
+import { hashPassword } from "../../../utils/password.js";
 
 const UUID_REGEX =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -223,6 +226,54 @@ class UserService {
         }
         await UserRepository.deactivateUser(userId);
         await PermissionResolverService.invalidateUserCache(userId);
+    }
+
+    async onboardUser(onboardData) {
+        const { username, email, pass, firstname, lastname, role: roleIdOrKey } = onboardData;
+
+        const existingUserByEmail = await UserRepository.findByEmail(email);
+        if (existingUserByEmail) {
+            throw new ApiError(409, "Email is already registered");
+        }
+
+        const existingUserByUsername = await UserRepository.findByUsername(username);
+        if (existingUserByUsername) {
+            throw new ApiError(409, "Username is already taken");
+        }
+
+        const role = await resolveRole(roleIdOrKey);
+        if (!role) {
+            throw new ApiError(
+                404,
+                `Role not found. Provide a valid role UUID or key (e.g. "admin", "instructor", "student").`
+            );
+        }
+
+        if (role.key === "super_admin") {
+            throw new ApiError(
+                403,
+                "The super_admin role cannot be assigned via the API. It is reserved for the system owner."
+            );
+        }
+
+        const passwordHash = await hashPassword(pass);
+
+        const user = await UserRepository.createWithRole({
+            username,
+            email,
+            passwordHash,
+            firstName: firstname,
+            lastName: lastname,
+        }, role.id);
+
+        try {
+            await redisClient.set(`username:${username}`, "1");
+            await redisClient.set(`email:${email.toLowerCase()}`, "1");
+        } catch (error) {
+            logger.warn(`Redis caching of onboarded user credentials failed: ${error.message}`);
+        }
+
+        return user;
     }
 }
 

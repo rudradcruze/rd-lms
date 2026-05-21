@@ -137,6 +137,36 @@ class UserRepository {
             data: { isActive: false },
         });
     }
+
+    async findByUsername(username) {
+        return prisma.user.findFirst({
+            where: { username },
+            select: { id: true },
+        });
+    }
+
+    async createWithRole(userData, roleId) {
+        const user = await prisma.user.create({
+            data: {
+                username: userData.username,
+                email: userData.email.toLowerCase(),
+                passwordHash: userData.passwordHash,
+                userInfo: {
+                    create: {
+                        firstName: userData.firstName,
+                        lastName: userData.lastName,
+                    },
+                },
+                userRoles: {
+                    create: {
+                        roleId: roleId,
+                    },
+                },
+            },
+        });
+
+        return this.findById(user.id);
+    }
 }
 
 export default new UserRepository();

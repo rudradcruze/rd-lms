@@ -88,6 +88,14 @@ class UserRepository {
     }
 
     async create(userData) {
+        const studentRole = await prisma.role.findUnique({
+            where: { key: "student" },
+        });
+
+        if (!studentRole) {
+            throw new Error("Default 'student' role not found in the database. Please run seeding.");
+        }
+
         const user = await prisma.user.create({
             data: {
                 username: userData.username,
@@ -97,6 +105,11 @@ class UserRepository {
                     create: {
                         firstName: userData.firstName,
                         lastName: userData.lastName,
+                    },
+                },
+                userRoles: {
+                    create: {
+                        roleId: studentRole.id,
                     },
                 },
             },

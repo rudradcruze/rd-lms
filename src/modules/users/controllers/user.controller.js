@@ -120,6 +120,14 @@ class UserController {
             .status(200)
             .json(new ApiResponse(200, null, USER_MESSAGES.USER_DEACTIVATED));
     }
+
+    async onboardUser(req, res) {
+        const user = await UserService.onboardUser(req.body);
+        return res
+            .status(201)
+            .json(new ApiResponse(201, user, "User onboarded successfully"));
+    }
 }
 
 export default new UserController();
+

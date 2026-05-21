@@ -36,6 +36,7 @@ describe("Auth API", () => {
             expect(res.body.data.user.email).toBe(uniqueEmail);
             expect(res.body.data.user.userInfo.firstName).toBe("Test");
             expect(res.body.data.user.userInfo.lastName).toBe("User");
+            expect(res.body.data.user.userRoles[0].role.key).toBe("student");
         });
 
         it("should reject duplicate email", async () => {
@@ -120,8 +121,68 @@ describe("Auth API", () => {
             expect(res.body.data).toHaveProperty("accessToken");
         });
 
+        it("should reject reuse of an already rotated/invalidated refresh token", async () => {
+            const loginRes = await request.post("/api/v1/auth/login").send({
+                identifier: CREDS.admin.email,
+                password: CREDS.admin.password,
+            });
+            const oldToken = loginRes.body.data.refreshToken;
+
+            const firstRefresh = await request.post("/api/v1/auth/refresh").send({
+                refreshToken: oldToken,
+            });
+            expect(firstRefresh.status).toBe(200);
+
+            const secondRefresh = await request.post("/api/v1/auth/refresh").send({
+                refreshToken: oldToken,
+            });
+            expect(secondRefresh.status).toBe(401);
+        });
+
         it("should reject an invalid refresh token", async () => {
             const res = await request.post("/api/v1/auth/refresh").send({
+                refreshToken: "this.is.invalid",
+            });
+            expect(res.status).toBe(401);
+        });
+    });
+
+    describe("POST /api/v1/auth/access", () => {
+        let freshRefreshToken;
+
+        beforeEach(async () => {
+            const res = await request.post("/api/v1/auth/login").send({
+                identifier: CREDS.admin.email,
+                password: CREDS.admin.password,
+            });
+            freshRefreshToken = res.body.data.refreshToken;
+        });
+
+        it("should issue ONLY a new access token and retain the same refresh token", async () => {
+            const res = await request.post("/api/v1/auth/access").send({
+                refreshToken: freshRefreshToken,
+            });
+            expect(res.status).toBe(200);
+            expect(res.body.data).toHaveProperty("accessToken");
+            expect(res.body.data).not.toHaveProperty("refreshToken");
+        });
+
+        it("should allow multiple consecutive access token requests with the same refresh token", async () => {
+            const firstAccess = await request.post("/api/v1/auth/access").send({
+                refreshToken: freshRefreshToken,
+            });
+            expect(firstAccess.status).toBe(200);
+            expect(firstAccess.body.data).toHaveProperty("accessToken");
+
+            const secondAccess = await request.post("/api/v1/auth/access").send({
+                refreshToken: freshRefreshToken,
+            });
+            expect(secondAccess.status).toBe(200);
+            expect(secondAccess.body.data).toHaveProperty("accessToken");
+        });
+
+        it("should reject an invalid refresh token for access requests", async () => {
+            const res = await request.post("/api/v1/auth/access").send({
                 refreshToken: "this.is.invalid",
             });
             expect(res.status).toBe(401);
@@ -185,6 +246,59 @@ describe("Auth API", () => {
                 .set("Authorization", `Bearer ${tok}`)
                 .send({ refreshToken: rt });
             expect(res.status).toBe(200);
+        });
+    });
+
+    // ── Check Availability ───────────────────────────────────────────────────
+    describe("GET /api/v1/auth/check-availability", () => {
+        it("should return available = true for an untaken username and email", async () => {
+            const res = await request
+                .get("/api/v1/auth/check-availability")
+                .query({
+                    username: `free_${Date.now()}`.slice(0, 16),
+                    email: `free_${Date.now()}@rd-lms.com`
+                });
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.username.available).toBe(true);
+            expect(res.body.data.email.available).toBe(true);
+        });
+
+        it("should return available = false for a taken username", async () => {
+            const res = await request
+                .get("/api/v1/auth/check-availability")
+                .query({ username: "superadmin" });
+            expect(res.status).toBe(200);
+            expect(res.body.data.username.available).toBe(false);
+            expect(res.body.data.email).toBeUndefined();
+        });
+
+        it("should return available = false for a taken email", async () => {
+            const res = await request
+                .get("/api/v1/auth/check-availability")
+                .query({ email: "superadmin@rd-lms.com" });
+            expect(res.status).toBe(200);
+            expect(res.body.data.email.available).toBe(false);
+            expect(res.body.data.username).toBeUndefined();
+        });
+
+        it("should reject with 400 if both parameters are missing", async () => {
+            const res = await request.get("/api/v1/auth/check-availability");
+            expect(res.status).toBe(400);
+        });
+
+        it("should reject with 400 if username is invalid (too short)", async () => {
+            const res = await request
+                .get("/api/v1/auth/check-availability")
+                .query({ username: "abc" });
+            expect(res.status).toBe(400);
+        });
+
+        it("should reject with 400 if email is invalid", async () => {
+            const res = await request
+                .get("/api/v1/auth/check-availability")
+                .query({ email: "not-an-email" });
+            expect(res.status).toBe(400);
         });
     });
 });

@@ -31,6 +31,15 @@ class AuthController {
             .json(new ApiResponse(200, result, AUTH_MESSAGES.REFRESH_SUCCESS));
     }
 
+    async getAccessToken(req, res) {
+        const { refreshToken } = req.body;
+        const result = await AuthService.generateAccessTokenFromRefreshToken(refreshToken);
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, result, "Access token generated successfully"));
+    }
+
     async logout(req, res) {
         const { refreshToken } = req.body;
         await AuthService.logout(req.user.userId, refreshToken);
@@ -51,6 +60,15 @@ class AuthController {
         return res
             .status(200)
             .json(new ApiResponse(200, null, AUTH_MESSAGES.PASSWORD_CHANGED));
+    }
+
+    async checkAvailability(req, res) {
+        const { username, email } = req.query;
+        const result = await AuthService.checkAvailability({ username, email });
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, result, "Availability check completed successfully"));
     }
 }
 
