@@ -1,4 +1,4 @@
-import UserRepository from "../modules/auth/repositories/UserRepository.js";
+import UserRepository from "../modules/auth/repositories/user.repository.js";
 import { ApiError } from "../utils/ApiError.js";
 
 /**

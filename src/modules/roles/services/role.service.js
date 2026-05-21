@@ -1,7 +1,7 @@
 import { ApiError } from "../../../utils/ApiError.js";
-import PermissionRepository from "../../permissions/repositories/PermissionRepository.js";
-import PermissionResolverService from "../../permissions/services/PermissionResolverService.js";
-import RoleRepository from "../repositories/RoleRepository.js";
+import PermissionRepository from "../../permissions/repositories/permission.repository.js";
+import PermissionResolverService from "../../permissions/services/permissionResolver.service.js";
+import RoleRepository from "../repositories/role.repository.js";
 import { PREDEFINED_ROLES, ROLE_MESSAGES } from "../role.constants.js";
 
 class RoleService {

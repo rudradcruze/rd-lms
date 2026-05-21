@@ -7,6 +7,16 @@ const normalizeSchemaMap = (schema) => {
     }
 
     if (typeof schema.safeParseAsync === "function") {
+        if (
+            schema.shape &&
+            (schema.shape.body || schema.shape.query || schema.shape.params)
+        ) {
+            const map = {};
+            if (schema.shape.body) map.body = schema.shape.body;
+            if (schema.shape.query) map.query = schema.shape.query;
+            if (schema.shape.params) map.params = schema.shape.params;
+            return map;
+        }
         return { body: schema };
     }
 

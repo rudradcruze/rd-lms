@@ -3,9 +3,11 @@ import prisma from "../../../configurations/db.postgres.js";
 class RefreshTokenRepository {
     async create(userId, tokenHash, expiresAt) {
         return prisma.refreshToken.create({
-            userId,
-            tokenHash,
-            expiresAt,
+            data: {
+                userId,
+                tokenHash,
+                expiresAt,
+            },
         });
     }
 

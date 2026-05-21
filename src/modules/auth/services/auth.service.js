@@ -7,12 +7,12 @@ import {
 } from "../../../utils/generateTokens.js";
 import { hashPassword, verifyPassword } from "../../../utils/password.js";
 import { AUTH_ERRORS, AUTH_MESSAGES, TOKEN_EXPIRY } from "../auth.constants.js";
-import RefreshTokenRepository from "../repositories/RefreshTokenRepository.js";
-import UserRepository from "../repositories/UserRepository.js";
+import RefreshTokenRepository from "../repositories/refresh-token.repository.js";
+import UserRepository from "../repositories/user.repository.js";
 
 class AuthService {
     async register(registerData) {
-        const { username, email, password } = registerData;
+        const { username, email, pass, firstname, lastname } = registerData;
 
         const existingUserByEmail = await UserRepository.findByEmail(email);
         if (existingUserByEmail) {
@@ -25,12 +25,14 @@ class AuthService {
             throw new ApiError(409, AUTH_MESSAGES.USERNAME_EXISTS);
         }
 
-        const passwordHash = await hashPassword(password);
+        const passwordHash = await hashPassword(pass);
 
         const user = await UserRepository.create({
             username,
             email,
             passwordHash,
+            firstName: firstname,
+            lastName: lastname,
         });
 
         const { accessToken, refreshToken } = generateTokens(user.id);
@@ -58,6 +60,13 @@ class AuthService {
             throw new ApiError(
                 AUTH_ERRORS.USER_INACTIVE.statusCode,
                 AUTH_ERRORS.USER_INACTIVE.message
+            );
+        }
+
+        if (user.isBlocked) {
+            throw new ApiError(
+                AUTH_ERRORS.USER_BLOCKED.statusCode,
+                AUTH_ERRORS.USER_BLOCKED.message
             );
         }
 
@@ -127,7 +136,7 @@ class AuthService {
         await RefreshTokenRepository.invalidateAllUserTokens(userId);
 
         const tokenKey = `blacklist:${userId}:${this.hashToken(refreshToken)}`;
-        await redisClient.setex(tokenKey, TOKEN_EXPIRY.REFRESH, "1");
+        await redisClient.set(tokenKey, "1", { EX: TOKEN_EXPIRY.REFRESH });
     }
 
     async changePassword(userId, oldPassword, newPassword) {
@@ -161,11 +170,9 @@ class AuthService {
 
         await RefreshTokenRepository.create(userId, tokenHash, expiresAt);
 
-        await redisClient.setex(
-            `refresh:${userId}:${tokenHash}`,
-            TOKEN_EXPIRY.REFRESH,
-            refreshToken
-        );
+        await redisClient.set(`refresh:${userId}:${tokenHash}`, refreshToken, {
+            EX: TOKEN_EXPIRY.REFRESH,
+        });
     }
 
     hashToken(token) {

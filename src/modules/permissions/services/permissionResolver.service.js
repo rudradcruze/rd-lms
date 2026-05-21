@@ -50,7 +50,9 @@ class PermissionResolverService {
                 };
 
                 // Cache for 1 hour
-                await redisClient.setex(cacheKey, 3600, JSON.stringify(result));
+                await redisClient.set(cacheKey, JSON.stringify(result), {
+                    EX: 3600,
+                });
                 return result;
             }
         }
@@ -131,7 +133,7 @@ class PermissionResolverService {
         };
 
         // Cache for 1 hour
-        await redisClient.setex(cacheKey, 3600, JSON.stringify(result));
+        await redisClient.set(cacheKey, JSON.stringify(result), { EX: 3600 });
         return result;
     }
 
@@ -180,9 +182,13 @@ class PermissionResolverService {
             select: { userId: true },
         });
 
+        if (usersWithRole.length === 0) return;
+
+        const pipeline = redisClient.multi();
         for (const { userId } of usersWithRole) {
-            await this.invalidateUserCache(userId);
+            pipeline.del(`user:${userId}:permissions`);
         }
+        await pipeline.exec();
     }
 }
 

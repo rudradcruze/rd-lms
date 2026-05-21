@@ -5,6 +5,7 @@ const publicUserSelect = {
     username: true,
     email: true,
     isActive: true,
+    isBlocked: true,
     createdAt: true,
     updatedAt: true,
     userRoles: {
@@ -25,6 +26,12 @@ const publicUserSelect = {
             },
         },
     },
+    userInfo: {
+        select: {
+            firstName: true,
+            lastName: true,
+        },
+    },
 };
 
 const authUserSelect = {
@@ -33,8 +40,15 @@ const authUserSelect = {
     email: true,
     passwordHash: true,
     isActive: true,
+    isBlocked: true,
     createdAt: true,
     updatedAt: true,
+    userInfo: {
+        select: {
+            firstName: true,
+            lastName: true,
+        },
+    },
 };
 
 class UserRepository {
@@ -75,9 +89,17 @@ class UserRepository {
 
     async create(userData) {
         const user = await prisma.user.create({
-            username: userData.username,
-            email: userData.email.toLowerCase(),
-            passwordHash: userData.passwordHash,
+            data: {
+                username: userData.username,
+                email: userData.email.toLowerCase(),
+                passwordHash: userData.passwordHash,
+                userInfo: {
+                    create: {
+                        firstName: userData.firstName,
+                        lastName: userData.lastName,
+                    },
+                },
+            },
         });
 
         return this.findById(user.id);

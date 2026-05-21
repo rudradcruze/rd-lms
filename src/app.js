@@ -3,10 +3,14 @@ import cors from "cors";
 import express from "express";
 
 import config from "./configurations/environment.js";
+import { setupSwagger } from "./configurations/swagger.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
 import apiRoutes from "./routes/index.js";
 
 const app = express();
+
+// Enable Swagger UI Documentation
+setupSwagger(app);
 
 // CORS configuration
 const { allowedOrigins, credentials } = config.cors;

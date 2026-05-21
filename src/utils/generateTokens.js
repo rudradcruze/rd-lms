@@ -2,16 +2,26 @@ import jwt from "jsonwebtoken";
 import config from "../configurations/environment.js";
 import { ACCESS_TOKEN_EXPIRY, REFRESH_TOKEN_EXPIRY } from "../constants.js";
 
+import crypto from "crypto";
+
 export const generateAccessToken = (userId) => {
-    return jwt.sign({ userId }, config.jwt.accessSecret, {
-        expiresIn: ACCESS_TOKEN_EXPIRY,
-    });
+    return jwt.sign(
+        { userId, jti: crypto.randomUUID() },
+        config.jwt.accessSecret,
+        {
+            expiresIn: ACCESS_TOKEN_EXPIRY,
+        }
+    );
 };
 
 export const generateRefreshToken = (userId) => {
-    return jwt.sign({ userId }, config.jwt.refreshSecret, {
-        expiresIn: REFRESH_TOKEN_EXPIRY,
-    });
+    return jwt.sign(
+        { userId, jti: crypto.randomUUID() },
+        config.jwt.refreshSecret,
+        {
+            expiresIn: REFRESH_TOKEN_EXPIRY,
+        }
+    );
 };
 
 export const generateTokens = (userId) => {
