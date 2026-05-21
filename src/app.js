@@ -10,8 +10,10 @@ import { ApiError } from "./utils/ApiError.js";
 
 const app = express();
 
-// Enable Swagger UI Documentation
-setupSwagger(app);
+// Enable Swagger UI Documentation in development environment only
+if (config.app.environment === "development") {
+    setupSwagger(app);
+}
 
 // CORS configuration
 const { allowedOrigins, credentials } = config.cors;
