@@ -4,9 +4,9 @@ import { ACCESS_TOKEN_EXPIRY, REFRESH_TOKEN_EXPIRY } from "../constants.js";
 
 import crypto from "crypto";
 
-export const generateAccessToken = (userId) => {
+export const generateAccessToken = (userId, tokenVersion = 0) => {
     return jwt.sign(
-        { userId, jti: crypto.randomUUID() },
+        { userId, jti: crypto.randomUUID(), tv: tokenVersion },
         config.jwt.accessSecret,
         {
             expiresIn: ACCESS_TOKEN_EXPIRY,
@@ -24,8 +24,8 @@ export const generateRefreshToken = (userId) => {
     );
 };
 
-export const generateTokens = (userId) => {
-    const accessToken = generateAccessToken(userId);
+export const generateTokens = (userId, tokenVersion = 0) => {
+    const accessToken = generateAccessToken(userId, tokenVersion);
     const refreshToken = generateRefreshToken(userId);
     return { accessToken, refreshToken };
 };

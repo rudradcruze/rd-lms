@@ -233,7 +233,7 @@ describe("Auth API", () => {
 
     // ── Logout ────────────────────────────────────────────────────────────────
     describe("POST /api/v1/auth/logout", () => {
-        it("should logout successfully", async () => {
+        it("should logout successfully and revoke the access token", async () => {
             const loginRes = await request.post("/api/v1/auth/login").send({
                 identifier: CREDS.instructor.email,
                 password: CREDS.instructor.password,
@@ -246,6 +246,12 @@ describe("Auth API", () => {
                 .set("Authorization", `Bearer ${tok}`)
                 .send({ refreshToken: rt });
             expect(res.status).toBe(200);
+
+            const protectedRes = await request
+                .get("/api/v1/users")
+                .set("Authorization", `Bearer ${tok}`);
+            expect(protectedRes.status).toBe(401);
+            expect(protectedRes.body.message).toMatch(/revoked/i);
         });
     });
 

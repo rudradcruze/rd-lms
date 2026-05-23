@@ -1,5 +1,4 @@
-import redisClient from "../configurations/db.redis.js";
-import logger from "../configurations/logger.js";
+import { getAccessTokenVersion } from "../modules/auth/utils/tokenSession.js";
 import { ApiError } from "../utils/ApiError.js";
 import { verifyAccessToken } from "../utils/generateTokens.js";
 
@@ -12,20 +11,12 @@ export const authenticate = async (req, res, next) => {
         }
 
         const decoded = verifyAccessToken(token);
+        const tokenVersion = Number(decoded.tv ?? 0);
+        const currentVersion = await getAccessTokenVersion(decoded.userId);
 
-        let isBlacklisted = false;
-        try {
-            isBlacklisted = await redisClient.exists(
-                `blacklist:${decoded.userId}:${token}`
-            );
-        } catch (error) {
-            logger.warn(`Auth token blacklist check skipped due to Redis error: ${error.message}`);
+        if (tokenVersion !== currentVersion) {
+            throw new ApiError(401, "Token has been revoked");
         }
-
-        if (isBlacklisted) {
-            throw new ApiError(401, "Token has been blacklisted");
-        }
-
 
         req.user = {
             userId: decoded.userId,

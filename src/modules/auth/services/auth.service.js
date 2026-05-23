@@ -9,8 +9,9 @@ import {
 } from "../../../utils/generateTokens.js";
 import { hashPassword, verifyPassword } from "../../../utils/password.js";
 import { AUTH_ERRORS, AUTH_MESSAGES, TOKEN_EXPIRY } from "../auth.constants.js";
+import UserRepository from "../../users/repositories/user.repository.js";
+import { invalidateAccessTokens, getAccessTokenVersion } from "../utils/tokenSession.js";
 import RefreshTokenRepository from "../repositories/refresh-token.repository.js";
-import UserRepository from "../repositories/user.repository.js";
 
 class AuthService {
     async register(registerData) {
@@ -37,7 +38,8 @@ class AuthService {
             lastName: lastname,
         });
 
-        const { accessToken, refreshToken } = generateTokens(user.id);
+        const tokenVersion = await getAccessTokenVersion(user.id);
+        const { accessToken, refreshToken } = generateTokens(user.id, tokenVersion);
 
         await this.storeRefreshToken(user.id, refreshToken);
 
@@ -60,11 +62,9 @@ class AuthService {
 
         if (username) {
             let taken = false;
-            let cacheChecked = false;
 
             try {
                 const cachedVal = await redisClient.get(`username:${username}`);
-                cacheChecked = true;
                 if (cachedVal === "1") {
                     taken = true;
                 }
@@ -92,11 +92,9 @@ class AuthService {
         if (email) {
             const normalizedEmail = email.toLowerCase();
             let taken = false;
-            let cacheChecked = false;
 
             try {
                 const cachedVal = await redisClient.get(`email:${normalizedEmail}`);
-                cacheChecked = true;
                 if (cachedVal === "1") {
                     taken = true;
                 }
@@ -158,7 +156,8 @@ class AuthService {
             );
         }
 
-        const { accessToken, refreshToken } = generateTokens(user.id);
+        const tokenVersion = await getAccessTokenVersion(user.id);
+        const { accessToken, refreshToken } = generateTokens(user.id, tokenVersion);
 
         await this.storeRefreshToken(user.id, refreshToken);
 
@@ -184,7 +183,6 @@ class AuthService {
             const tokenHash = this.hashToken(token);
 
             let isCachedValid = false;
-            let redisError = false;
 
             try {
                 const cachedVal = await redisClient.get(`refresh:${decoded.userId}:${tokenHash}`);
@@ -192,20 +190,18 @@ class AuthService {
                     isCachedValid = true;
                 }
             } catch (error) {
-                redisError = true;
                 logger.warn(`Redis error in refresh token validation: ${error.message}`);
             }
 
-            let storedToken = null;
+            if (!isCachedValid) {
+                const storedToken =
+                    await RefreshTokenRepository.findByTokenHash(tokenHash);
 
-            if (isCachedValid) {
-                // Cache hit! Bypass database lookup
-                storedToken = { tokenHash };
-            } else {
-                // Cache miss or Redis error: query PostgreSQL
-                storedToken = await RefreshTokenRepository.findByTokenHash(tokenHash);
-
-                if (!storedToken || storedToken.blacklistedAt || new Date(storedToken.expiresAt) <= new Date()) {
+                if (
+                    !storedToken ||
+                    storedToken.blacklistedAt ||
+                    new Date(storedToken.expiresAt) <= new Date()
+                ) {
                     throw new Error("Token blacklisted, expired or not found");
                 }
             }
@@ -229,7 +225,11 @@ class AuthService {
             // Invalidate the old refresh token in PostgreSQL
             await RefreshTokenRepository.invalidateTokenByHash(tokenHash);
 
-            const { accessToken, refreshToken } = generateTokens(user.id);
+            const tokenVersion = await getAccessTokenVersion(user.id);
+            const { accessToken, refreshToken } = generateTokens(
+                user.id,
+                tokenVersion
+            );
             await this.storeRefreshToken(user.id, refreshToken);
 
             return {
@@ -238,6 +238,9 @@ class AuthService {
                 refreshToken,
             };
         } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
             throw new ApiError(
                 AUTH_ERRORS.INVALID_TOKEN.statusCode,
                 AUTH_ERRORS.INVALID_TOKEN.message
@@ -251,7 +254,6 @@ class AuthService {
             const tokenHash = this.hashToken(token);
 
             let isCachedValid = false;
-            let redisError = false;
 
             try {
                 const cachedVal = await redisClient.get(`refresh:${decoded.userId}:${tokenHash}`);
@@ -259,20 +261,18 @@ class AuthService {
                     isCachedValid = true;
                 }
             } catch (error) {
-                redisError = true;
                 logger.warn(`Redis error in refresh token validation: ${error.message}`);
             }
 
-            let storedToken = null;
+            if (!isCachedValid) {
+                const storedToken =
+                    await RefreshTokenRepository.findByTokenHash(tokenHash);
 
-            if (isCachedValid) {
-                // Cache hit! Bypass database lookup
-                storedToken = { tokenHash };
-            } else {
-                // Cache miss or Redis error: query PostgreSQL
-                storedToken = await RefreshTokenRepository.findByTokenHash(tokenHash);
-
-                if (!storedToken || storedToken.blacklistedAt || new Date(storedToken.expiresAt) <= new Date()) {
+                if (
+                    !storedToken ||
+                    storedToken.blacklistedAt ||
+                    new Date(storedToken.expiresAt) <= new Date()
+                ) {
                     throw new Error("Token blacklisted, expired or not found");
                 }
             }
@@ -285,14 +285,17 @@ class AuthService {
                 );
             }
 
-            // ONLY generate a new accessToken. Do NOT invalidate or regenerate the refreshToken!
-            const accessToken = generateAccessToken(user.id);
+            const tokenVersion = await getAccessTokenVersion(user.id);
+            const accessToken = generateAccessToken(user.id, tokenVersion);
 
             return {
                 user,
                 accessToken,
             };
         } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
             throw new ApiError(
                 AUTH_ERRORS.INVALID_TOKEN.statusCode,
                 AUTH_ERRORS.INVALID_TOKEN.message
@@ -302,16 +305,16 @@ class AuthService {
 
     async logout(userId, refreshToken) {
         await RefreshTokenRepository.invalidateAllUserTokens(userId);
+        await invalidateAccessTokens(userId);
 
         const tokenHash = this.hashToken(refreshToken);
-        const tokenKey = `blacklist:${userId}:${tokenHash}`;
         try {
-            await redisClient.set(tokenKey, "1", { EX: TOKEN_EXPIRY.REFRESH });
-            // Clean up Redis caches for this specific token
             await redisClient.del(`refresh:${userId}:${tokenHash}`);
             await redisClient.sRem(`user:${userId}:refreshes`, tokenHash);
         } catch (error) {
-            logger.warn(`Logout token blacklisting/cleanup skipped due to Redis error: ${error.message}`);
+            logger.warn(
+                `Logout refresh token cleanup skipped due to Redis error: ${error.message}`
+            );
         }
     }
 
@@ -338,6 +341,7 @@ class AuthService {
         await UserRepository.changePassword(userId, hashedPassword);
 
         await RefreshTokenRepository.invalidateAllUserTokens(userId);
+        await invalidateAccessTokens(userId);
 
         // Revoke all active refresh tokens in Redis instantly
         try {

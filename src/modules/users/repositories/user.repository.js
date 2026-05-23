@@ -3,11 +3,16 @@ import prisma from "../../../configurations/db.postgres.js";
 const userRoleSelect = {
     id: true,
     roleId: true,
+    createdAt: true,
+    updatedAt: true,
     role: {
         select: {
             id: true,
             name: true,
             key: true,
+            description: true,
+            createdAt: true,
+            updatedAt: true,
         },
     },
 };
@@ -31,11 +36,30 @@ const publicUserSelect = {
     },
 };
 
+const authUserSelect = {
+    id: true,
+    username: true,
+    email: true,
+    passwordHash: true,
+    isActive: true,
+    isBlocked: true,
+    createdAt: true,
+    updatedAt: true,
+    userInfo: {
+        select: {
+            firstName: true,
+            lastName: true,
+        },
+    },
+};
+
 class UserRepository {
-    async findById(id) {
+    async findById(id, options = {}) {
+        const { includePasswordHash = false } = options;
+
         return prisma.user.findUnique({
             where: { id },
-            select: publicUserSelect,
+            select: includePasswordHash ? authUserSelect : publicUserSelect,
         });
     }
 
@@ -46,8 +70,28 @@ class UserRepository {
         });
     }
 
+    async findByUsername(username) {
+        return prisma.user.findFirst({
+            where: { username },
+            select: { id: true },
+        });
+    }
+
+    async findByEmailOrUsername(identifier) {
+        return prisma.user.findFirst({
+            where: {
+                OR: [
+                    { email: identifier.toLowerCase() },
+                    { username: identifier },
+                ],
+            },
+            select: authUserSelect,
+        });
+    }
+
     async findAll(options = {}) {
-        const { limit = 10, offset = 0, isActive, isBlocked, roleKey } = options;
+        const { limit = 10, offset = 0, isActive, isBlocked, roleKey } =
+            options;
 
         const where = {};
         if (isActive !== undefined) where.isActive = isActive;
@@ -70,6 +114,68 @@ class UserRepository {
         ]);
 
         return { rows, count };
+    }
+
+    async create(userData) {
+        const studentRole = await prisma.role.findUnique({
+            where: { key: "student" },
+        });
+
+        if (!studentRole) {
+            throw new Error(
+                "Default 'student' role not found in the database. Please run seeding."
+            );
+        }
+
+        return this.createWithRole(userData, studentRole.id);
+    }
+
+    async createWithRole(userData, roleId) {
+        const user = await prisma.user.create({
+            data: {
+                username: userData.username,
+                email: userData.email.toLowerCase(),
+                passwordHash: userData.passwordHash,
+                userInfo: {
+                    create: {
+                        firstName: userData.firstName,
+                        lastName: userData.lastName,
+                    },
+                },
+                userRoles: {
+                    create: {
+                        roleId,
+                    },
+                },
+            },
+        });
+
+        return this.findById(user.id);
+    }
+
+    async update(userId, userData) {
+        await prisma.user.update({
+            where: { id: userId },
+            data: {
+                ...userData,
+                ...(userData.email
+                    ? { email: userData.email.toLowerCase() }
+                    : {}),
+            },
+        });
+
+        return this.findById(userId);
+    }
+
+    async changePassword(userId, newPassword) {
+        await prisma.user.update({
+            where: { id: userId },
+            data: { passwordHash: newPassword },
+        });
+    }
+
+    async delete(userId) {
+        await prisma.user.delete({ where: { id: userId } });
     }
 
     async assignRole(userId, roleId) {
@@ -136,36 +242,6 @@ class UserRepository {
             where: { id: userId },
             data: { isActive: false },
         });
-    }
-
-    async findByUsername(username) {
-        return prisma.user.findFirst({
-            where: { username },
-            select: { id: true },
-        });
-    }
-
-    async createWithRole(userData, roleId) {
-        const user = await prisma.user.create({
-            data: {
-                username: userData.username,
-                email: userData.email.toLowerCase(),
-                passwordHash: userData.passwordHash,
-                userInfo: {
-                    create: {
-                        firstName: userData.firstName,
-                        lastName: userData.lastName,
-                    },
-                },
-                userRoles: {
-                    create: {
-                        roleId: roleId,
-                    },
-                },
-            },
-        });
-
-        return this.findById(user.id);
     }
 }
 
