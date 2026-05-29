@@ -6,6 +6,10 @@ import userRoutes from "../modules/users/routes/user.routes.js";
 
 const router = Router();
 
+router.get("/", (req, res) => {
+    res.send("RD-LMS API is running.");
+});
+
 router.use("/auth", authRoutes);
 router.use("/roles", roleRoutes);
 router.use("/permissions", permissionRoutes);

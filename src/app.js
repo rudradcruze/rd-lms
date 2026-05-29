@@ -39,6 +39,10 @@ app.use(express.static("public"));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+app.get("/", (req, res) => {
+    res.send("RD-LMS API is running.");
+});
+
 app.use("/api/v1", apiRoutes);
 
 // Fallback catch-all for unmatched routes & unsupported methods (404)
