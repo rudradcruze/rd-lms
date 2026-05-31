@@ -28,26 +28,37 @@ router.use(authenticate);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [key, name]
- *             properties:
- *               key:
- *                 type: string
- *                 pattern: '^[a-z_]+$'
- *                 example: content_manager
- *               name:
- *                 type: string
- *                 example: Content Manager
- *               description:
- *                 type: string
- *                 example: Manages courses and study materials
+ *             $ref: '#/components/schemas/CreateRoleRequest'
  *     responses:
  *       201:
  *         description: Role created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Role'
  *       400:
  *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
  *       403:
  *         description: Forbidden - Super Admin required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
+ *       409:
+ *         description: Role key already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
  */
 router.post(
     "/",
@@ -74,8 +85,21 @@ router.post(
  *     responses:
  *       200:
  *         description: Roles list retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/RoleListData'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
  */
 router.get(
     "/",
@@ -99,8 +123,21 @@ router.get(
  *     responses:
  *       200:
  *         description: Role details retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Role'
  *       404:
  *         description: Role not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
  */
 router.get(
     "/:roleId",

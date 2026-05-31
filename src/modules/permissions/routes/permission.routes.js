@@ -27,32 +27,31 @@ router.use(authenticate);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [key, name, resource, action]
- *             properties:
- *               key:
- *                 type: string
- *                 pattern: '^[a-z_.]+$'
- *                 example: courses.create
- *               name:
- *                 type: string
- *                 example: Create Courses
- *               resource:
- *                 type: string
- *                 example: courses
- *               action:
- *                 type: string
- *                 example: create
- *               description:
- *                 type: string
- *                 example: Allows creating new courses in the LMS
+ *             $ref: '#/components/schemas/CreatePermissionRequest'
  *     responses:
  *       201:
  *         description: Permission created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Permission'
  *       400:
  *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
  *       403:
  *         description: Forbidden - Super Admin required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
  */
 router.post(
     "/",
@@ -79,8 +78,21 @@ router.post(
  *     responses:
  *       200:
  *         description: Permissions list retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/PermissionListData'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
  */
 router.get(
     "/",
@@ -104,8 +116,21 @@ router.get(
  *     responses:
  *       200:
  *         description: Permission details retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Permission'
  *       404:
  *         description: Permission not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
  */
 router.get(
     "/:permissionId",

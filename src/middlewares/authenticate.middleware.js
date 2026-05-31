@@ -37,3 +37,31 @@ export const authenticate = async (req, res, next) => {
         }
     }
 };
+
+export const optionalAuthenticate = async (req, res, next) => {
+    try {
+        const token = req.headers.authorization?.split(" ")[1];
+
+        if (!token) {
+            return next();
+        }
+
+        const decoded = verifyAccessToken(token);
+        const tokenVersion = Number(decoded.tv ?? 0);
+        const currentVersion = await getAccessTokenVersion(decoded.userId);
+
+        if (tokenVersion !== currentVersion) {
+            return next();
+        }
+
+        req.user = {
+            userId: decoded.userId,
+            iat: decoded.iat,
+            exp: decoded.exp,
+        };
+
+        next();
+    } catch {
+        next();
+    }
+};

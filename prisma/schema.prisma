@@ -7,19 +7,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 model User {
-  id              String           @id @default(uuid()) @db.Uuid
-  username        String           @unique @db.VarChar(16)
-  email           String           @unique
-  passwordHash    String           @map("password_hash")
-  isActive        Boolean          @default(true) @map("is_active")
-  isBlocked       Boolean          @default(false) @map("is_blocked")
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
-  refreshTokens   RefreshToken[]
-  userRoles       UserRole[]
-  userPermissions UserPermission[]
-  userInfo        UserInfo?
+  id                String             @id @default(uuid()) @db.Uuid
+  username          String             @unique @db.VarChar(16)
+  email             String             @unique
+  passwordHash      String             @map("password_hash")
+  isActive          Boolean            @default(true) @map("is_active")
+  isBlocked         Boolean            @default(false) @map("is_blocked")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  refreshTokens     RefreshToken[]
+  userRoles         UserRole[]
+  userPermissions   UserPermission[]
+  userInfo          UserInfo?
+  createdCourses    Course[]           @relation("CourseCreator")
+  courseInstructors CourseInstructor[]
 
   @@map("users")
 }
@@ -120,4 +128,65 @@ model UserInfo {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_info")
+}
+
+model CourseCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  courses     Course[]
+
+  @@map("course_categories")
+}
+
+model Course {
+  id               String             @id @default(uuid()) @db.Uuid
+  title            String
+  slug             String             @unique
+  shortDescription String?            @map("short_description")
+  description      String?
+  thumbnailUrl     String?            @map("thumbnail_url")
+  status           CourseStatus       @default(DRAFT)
+  categoryId       String?            @map("category_id") @db.Uuid
+  createdById      String             @map("created_by_id") @db.Uuid
+  deletedAt        DateTime?          @map("deleted_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  category         CourseCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  creator          User               @relation("CourseCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  instructors      CourseInstructor[]
+  settings         CourseSettings?
+
+  @@index([status])
+  @@index([categoryId])
+  @@map("courses")
+}
+
+model CourseInstructor {
+  id        String   @id @default(uuid()) @db.Uuid
+  courseId  String   @map("course_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at")
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, userId], map: "unique_course_instructor")
+  @@map("course_instructors")
+}
+
+model CourseSettings {
+  id                  String   @id @default(uuid()) @db.Uuid
+  courseId            String   @unique @map("course_id") @db.Uuid
+  allowSelfEnrollment Boolean  @default(true) @map("allow_self_enrollment")
+  requiresApproval    Boolean  @default(false) @map("requires_approval")
+  showInCatalog       Boolean  @default(true) @map("show_in_catalog")
+  enableDiscussions   Boolean  @default(true) @map("enable_discussions")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+  course              Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("course_settings")
 }

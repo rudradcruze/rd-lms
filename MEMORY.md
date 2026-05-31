@@ -1,6 +1,6 @@
 # MEMORY
 
-Last updated: 2026-05-29
+Last updated: 2026-05-31
 
 ## 1) Stack (from `package.json`)
 
@@ -31,7 +31,7 @@ Scripts:
 - `src/`
   - `app.js`, `server.js`, `constants.js`
   - `configurations/`
-    - `environment.js`, `db.postgres.js`, `db.redis.js`, `logger.js`, `swagger.js`
+    - `environment.js`, `db.postgres.js`, `db.redis.js`, `logger.js`, `swagger.js`, `swagger.schemas.js`
   - `middlewares/`
     - `authenticate.middleware.js`
     - `authorize.middleware.js`
@@ -48,13 +48,14 @@ Scripts:
     - `users/` -> constants, routes, schemas, controller, service, repository
     - `roles/` -> constants, routes, schemas, controller, service, repository
     - `permissions/` -> constants, routes, schemas, controller, service, resolver service, repository
+    - `courses/` -> constants, routes, schemas, controller, service, repository
 - `prisma/`
   - `schema.prisma`
   - `seed.js`
-  - `migrations/` (4 SQL migrations + lock)
+  - `migrations/` (5 SQL migrations + lock)
 - `tests/`
   - `helpers/setup.js`
-  - `auth.test.js`, `roles.test.js`, `users.test.js`
+  - `auth.test.js`, `roles.test.js`, `users.test.js`, `courses.test.js`
 - Root config/docs:
   - `README.md`, `.env.example`, `jest.config.js`, `.prettierrc`, `.prettierignore`, `.gitignore`
   - `package.json`, `package-lock.json`
@@ -76,6 +77,8 @@ Scripts:
   - many-to-many via join `userRoles` <-> `Role`
   - many-to-many override via join `userPermissions` <-> `Permission`
   - one-to-one optional `userInfo`
+  - one-to-many `createdCourses` (as creator)
+  - one-to-many `courseInstructors`
 
 ### `UserInfo` (`user_info`)
 - `id` UUID PK
@@ -130,8 +133,44 @@ Scripts:
 - timestamps
 - unique composite: `(userId, permissionId)` (`unique_user_permission`)
 
+### `CourseCategory` (`course_categories`)
+- `id` UUID PK
+- `name` unique
+- `description` nullable
+- timestamps
+- relations: one-to-many `courses`
+
+### `Course` (`courses`)
+- `id` UUID PK
+- `title`, `slug` unique
+- `shortDescription`, `description`, `thumbnailUrl` nullable
+- `status` enum `CourseStatus` (`DRAFT`, `PUBLISHED`, `ARCHIVED`) default `DRAFT`
+- `categoryId` nullable FK -> `course_categories.id` (set null on delete)
+- `createdById` FK -> `users.id` (restrict)
+- `deletedAt` nullable (soft delete)
+- timestamps
+- indexes: `status`, `categoryId`
+- relations: `category`, `creator`, `instructors`, `settings`
+
+### `CourseInstructor` (`course_instructors`)
+- `id` UUID PK
+- `courseId` FK -> `courses.id` (cascade)
+- `userId` FK -> `users.id` (cascade)
+- `isPrimary` bool default false
+- `createdAt`
+- unique composite: `(courseId, userId)` (`unique_course_instructor`)
+
+### `CourseSettings` (`course_settings`)
+- `id` UUID PK
+- `courseId` unique FK -> `courses.id` (cascade)
+- `allowSelfEnrollment` bool default true
+- `requiresApproval` bool default false
+- `showInCatalog` bool default true
+- `enableDiscussions` bool default true
+- timestamps
+
 Soft delete:
-- No soft-delete fields on core entities.
+- `Course.deletedAt` — soft-deleted courses hidden from normal queries.
 - Token invalidation is logical via `refresh_tokens.blacklisted_at`.
 
 ## 4) API Route Inventory (actual code)
@@ -195,6 +234,31 @@ Base prefix: `/api/v1`
 - `DELETE /users/:userId/permissions/:permissionId` -> `authorize(["super_admin"])`
 - `GET /users/:userId/permissions` -> `authorize(["admin","super_admin"])`
 
+### Course routes (`src/modules/courses/routes/courses.routes.js`)
+- Public (no auth):
+  - `GET /courses/categories`
+  - `GET /courses` (optional auth — admins see all statuses when authenticated)
+  - `GET /courses/:courseId` (optional auth — public sees published only)
+  - `GET /courses/:courseId/instructors` (optional auth — public sees published only)
+- Router-level `authenticate` applies to all mutating routes below
+- `POST /courses/categories` -> `authorize(["admin","super_admin"]) -> validate(createCategorySchema)`
+- `POST /courses` -> `permission(["courses.create"]) -> validate(createCourseSchema)`
+- `GET /courses` -> public; optional auth elevates admin visibility
+- `GET /courses/:courseId` -> public; optional auth elevates admin visibility
+- `PATCH /courses/:courseId` -> `permission(["courses.update"]) -> validate(updateCourseSchema)`
+- `PATCH /courses/:courseId/publish` -> `permission(["courses.publish"])`
+- `PATCH /courses/:courseId/archive` -> `permission(["courses.publish"])`
+- `DELETE /courses/:courseId` -> `permission(["courses.delete"])`
+- `POST /courses/:courseId/instructors` -> `permission(["courses.update"]) -> validate(assignInstructorSchema)`
+- `DELETE /courses/:courseId/instructors/:userId` -> `permission(["courses.update"])`
+- `GET /courses/:courseId/instructors` -> public; optional auth elevates admin visibility
+
+Service-level access rules (courses):
+- Unauthenticated/public: list/get only `PUBLISHED`, non-deleted courses and their instructors.
+- Authenticated non-admin: same as public for read endpoints.
+- Update/publish: primary instructor OR admin/super_admin.
+- Archive/delete/assign instructors: admin/super_admin only.
+
 ## 5) Auth System (JWT/session)
 
 Token generation (`src/utils/generateTokens.js`):
@@ -243,6 +307,12 @@ Permission resolution priority (`permissionResolver.service.js`):
 2. explicit user deny (`user_permissions.allowed=false`)
 3. explicit user allow (`user_permissions.allowed=true`)
 4. role-derived permissions
+
+Course permission role mappings (seed):
+- `super_admin`: all (including `courses.*`)
+- `admin`: all 5 course keys (`read`, `create`, `update`, `delete`, `publish`)
+- `instructor`: `read`, `create`, `update`, `publish` (no `delete`)
+- `student`: `read` only
 
 ## 7) Response Envelope
 
@@ -294,6 +364,7 @@ Seed behavior:
   - `student1@rd-lms.com`
   - `student2@rd-lms.com`
 - Assigns role-permission matrix per `ROLE_PERMISSIONS`.
+- Seeds 4 default course categories: Programming, Data Science, Mathematics, Business.
 
 ## 11) Validation
 
@@ -305,6 +376,7 @@ Schema locations:
 - `src/modules/users/schemas/user.schema.js`
 - `src/modules/roles/schemas/role.schema.js`
 - `src/modules/permissions/schemas/permission.schema.js`
+- `src/modules/courses/schemas/courses.schema.js`
 
 Application pattern:
 - Route-level `validate(schema)` middleware before controller.
@@ -336,6 +408,7 @@ Coverage areas:
 - `tests/auth.test.js`: register/login/refresh/access/logout/password-change/check-availability, fallback error envelope checks.
 - `tests/roles.test.js`: role CRUD + role-permission assignment auth checks.
 - `tests/users.test.js`: user listing/filtering, block/unblock, activate/deactivate, role assignment safeguards, user permission overrides, onboarding.
+- `tests/courses.test.js`: course CRUD lifecycle, publishing ownership, listing visibility, instructor assignment, soft delete, validation.
 
 ## 14) Observed Inconsistencies / Clarifications
 
@@ -350,4 +423,6 @@ Coverage areas:
 
 | Date | Author | Change |
 |---|---|---|
+| 2026-05-31 | Agent | Centralized OpenAPI component schemas in `swagger.schemas.js`; route JSDoc uses `$ref` for request/response models; RULES.md section 8 documents Swagger workflow. |
+| 2026-05-31 | Agent | Implemented BR-02 courses module: Prisma models, seed categories, full API at `/api/v1/courses`, instructor role no longer has `courses.delete`. |
 | 2026-05-29 | Codex | Initial full-codebase audit and architecture memory creation from current repository state. |

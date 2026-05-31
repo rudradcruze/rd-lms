@@ -45,6 +45,15 @@ router.use(authenticate);
  *     responses:
  *       200:
  *         description: List of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/UserListData'
  */
 router.get(
     "/",
@@ -65,38 +74,43 @@ router.get(
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [username, email, pass, firstname, lastname, role]
- *             properties:
- *               username:
- *                 type: string
- *                 description: Unique username (4-16 chars, alphanumeric/dots/underscores)
- *               email:
- *                 type: string
- *                 description: Unique email address
- *               pass:
- *                 type: string
- *                 description: Password (min 8 chars)
- *               firstname:
- *                 type: string
- *                 description: First name of the user
- *               lastname:
- *                 type: string
- *                 description: Last name of the user
- *               role:
- *                 type: string
- *                 description: Role key (e.g., "instructor", "admin", "student") or Role UUID. Note that assigning the "super_admin" role is not allowed.
+ *             $ref: '#/components/schemas/OnboardUserRequest'
  *     responses:
  *       201:
  *         description: User onboarded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/User'
  *       400:
  *         description: Invalid input parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
  *       401:
  *         description: Unauthorized (missing or invalid token)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
  *       403:
  *         description: Forbidden (insufficient permissions, or attempting to onboard super_admin)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
  *       409:
  *         description: Conflict (username or email already registered)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
  */
 router.post(
     "/",
@@ -119,6 +133,24 @@ router.post(
  *         name: userId
  *         required: true
  *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: User retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/User'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
  */
 router.get(
     "/:userId",
@@ -370,6 +402,18 @@ router.delete(
  *         required: true
  *         schema: { type: string }
  *         description: User UUID
+ *     responses:
+ *       200:
+ *         description: Resolved permissions retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/ResolvedPermissions'
  */
 router.get(
     "/:userId/permissions",
