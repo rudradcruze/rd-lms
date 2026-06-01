@@ -82,7 +82,7 @@ Read MEMORY.md and RULES.md first. Do not change unrelated modules.
 Implement a new `courses` module for rd-lms: instructors create and manage courses; students read published courses.
 
 ## Requirements
-- Prisma model `Course`: id (UUID), title, slug (unique), description (optional), status (enum: draft | published), instructorId (FK → users), createdAt, updatedAt
+- Prisma model `Course`: id (BigInt autoincrement), title, slug (unique), description (optional), status (enum: draft | published), createdById (BigInt FK → users), categoryId (optional BigInt FK), createdAt, updatedAt
 - API routes under `/api/v1/courses`:
   - POST / — create course — `permission(["courses.create"])` — instructor or admin
   - GET / — list courses (paginated, filter by status) — authenticated
@@ -91,7 +91,7 @@ Implement a new `courses` module for rd-lms: instructors create and manage cours
   - PATCH /:courseId/publish — publish — `permission(["courses.publish"])` — owner or admin
   - DELETE /:courseId — delete — `permission(["courses.delete"])` — owner or admin
 - Router: `router.use(authenticate)` at top
-- Validation: Zod in `src/modules/courses/schemas/course.schema.js`
+- Validation: Zod in `src/modules/courses/schemas/courses.schema.js` using `positiveBigIntParam` for route IDs
 - Service throws `ApiError(404)` if not found, `ApiError(403)` if student requests draft
 - Controllers return `new ApiResponse(200|201, data, message)`
 
@@ -300,7 +300,7 @@ BR-03 Enrollment Management: Admins approve enrollments; students enroll in publ
   - POST /api/v1/enrollments — authenticate → permission(["enrollments.read"]) — student requests enrollment (body: courseId)
   - GET /api/v1/enrollments — authenticate → permission(["enrollments.read"]) — list (admin all; student own; instructor by course)
   - PATCH /api/v1/enrollments/:id/approve — authenticate → permission(["enrollments.manage"]) — admin or instructor for owned course
-- Data model: Enrollment (id, userId, courseId, status: pending|approved|rejected, timestamps); FKs cascade per existing patterns
+- Data model: Enrollment (id BigInt, userId BigInt, courseId BigInt, status: pending|approved|rejected, timestamps); FKs cascade per existing patterns
 - Auth: Bearer token; no public routes
 
 ## Acceptance criteria
@@ -372,25 +372,24 @@ Read MEMORY.md and RULES.md.
 Read MEMORY.md and RULES.md.
 
 ## Bug
-- Symptom: DELETE /api/v1/users/:userId/roles/instructor returns 404 when :roleId is role key "instructor"
-- Expected: Resolve role by UUID or key (as user.service assignRoleToUser already does via resolveRole)
-- Actual: Route works for assign POST with key; remove may not resolve key consistently
-- Reproduction: tests/users.test.js DELETE with role key instructor
-- Likely area: src/modules/users/services/user.service.js removeRoleFromUser + route param handling
+- Symptom: DELETE /api/v1/users/:userId/roles/:roleId returns 400 when path uses role key
+- Expected: Path `:roleId` accepts numeric ID only; POST body may still use role key
+- Actual: Path validation rejects non-numeric roleId
+- Reproduction: tests/users.test.js DELETE with numeric instructor role ID
+- Likely area: src/utils/validationSchemas.js, user routes
 
 ## Constraints
-- Mirror resolveRole() pattern from assignRoleToUser; do not change authorize(["super_admin"]) guard
+- Path params use `positiveBigIntParam`; body assign uses `roleIdBody` (ID or key)
 - Preserve PermissionResolverService.invalidateUserCache on success
 
 ## Verification
-- [ ] tests/users.test.js DELETE role by key passes
-- [ ] UUID path still works
+- [ ] tests/users.test.js DELETE role by numeric ID passes
+- [ ] POST assign role by key still works
 
 ## Post-implementation checklist
-- [ ] Fix removeRoleFromUser to resolve UUID or key
 - [ ] Confirm tests/users.test.js green
 - [ ] npm test
-- [ ] Update MEMORY.md ⚠️ note if UUID-or-key is now consistently supported for user role routes
+- [ ] Update MEMORY.md route/param notes
 ```
 
 ### Files the agent is expected to touch
@@ -552,13 +551,14 @@ Avoid prompts that:
 ## Standard post-implementation checklist (copy into any prompt)
 
 ```text
-## Post-implementation checklist (mandatory per RULES.md §13)
+## Post-implementation checklist (mandatory per RULES.md §15)
 - [ ] Code follows module layout and middleware order in RULES.md
 - [ ] Services throw ApiError; routes use asyncHandler; controllers use ApiResponse
 - [ ] Tests added/updated under tests/*.test.js using tests/helpers/setup.js
 - [ ] If prisma/schema changed: migrate + seed (upsert) + prisma generate
 - [ ] npm test passes (npm run test:coverage for larger features)
 - [ ] MEMORY.md updated (models, routes, permissions, Change Log)
+- [ ] BigInt PK/FK in Prisma; `positiveBigIntParam` on routes; `serializeBigInt` for responses (no controller ID conversion)
 - [ ] No assignment of super_admin via new APIs; permission cache invalidation preserved where RBAC changes
 ```
 

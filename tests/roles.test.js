@@ -93,9 +93,37 @@ describe("Roles API", () => {
 
         it("returns 404 for non-existent role", async () => {
             const res = await request
-                .get("/api/v1/roles/00000000-0000-0000-0000-000000000000")
+                .get("/api/v1/roles/999999999")
                 .set("Authorization", `Bearer ${superAdminToken}`);
             expect(res.status).toBe(404);
+        });
+
+        it("rejects non-numeric roleId", async () => {
+            const res = await request
+                .get("/api/v1/roles/abc")
+                .set("Authorization", `Bearer ${superAdminToken}`);
+            expect(res.status).toBe(400);
+        });
+
+        it("rejects decimal roleId", async () => {
+            const res = await request
+                .get("/api/v1/roles/1.5")
+                .set("Authorization", `Bearer ${superAdminToken}`);
+            expect(res.status).toBe(400);
+        });
+
+        it("rejects negative roleId", async () => {
+            const res = await request
+                .get("/api/v1/roles/-1")
+                .set("Authorization", `Bearer ${superAdminToken}`);
+            expect(res.status).toBe(400);
+        });
+
+        it("rejects zero roleId", async () => {
+            const res = await request
+                .get("/api/v1/roles/0")
+                .set("Authorization", `Bearer ${superAdminToken}`);
+            expect(res.status).toBe(400);
         });
     });
 

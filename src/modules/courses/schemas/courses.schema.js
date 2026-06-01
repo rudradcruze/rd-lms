@@ -1,6 +1,11 @@
 import { z } from "zod";
-
-const uuidSchema = z.string().uuid("Invalid UUID format");
+import {
+    courseIdParamSchema,
+    courseUserParamsSchema,
+    numericIdFromBody,
+    optionalNumericIdFromBody,
+    optionalPositiveBigInt,
+} from "../../../utils/validationSchemas.js";
 
 const courseSettingsSchema = z.object({
     allowSelfEnrollment: z.boolean().optional(),
@@ -25,14 +30,12 @@ export const createCourseSchema = z.object({
             .string()
             .url("Thumbnail URL must be a valid URL")
             .optional(),
-        categoryId: uuidSchema.optional(),
+        categoryId: optionalNumericIdFromBody,
     }),
 });
 
 export const updateCourseSchema = z.object({
-    params: z.object({
-        courseId: uuidSchema,
-    }),
+    params: courseIdParamSchema.shape.params,
     body: z.object({
         title: z
             .string()
@@ -49,7 +52,7 @@ export const updateCourseSchema = z.object({
             .string()
             .url("Thumbnail URL must be a valid URL")
             .optional(),
-        categoryId: uuidSchema.optional(),
+        categoryId: optionalNumericIdFromBody,
         settings: courseSettingsSchema.optional(),
     }),
 });
@@ -60,31 +63,16 @@ export const listCoursesSchema = z.object({
         limit: z.string().optional(),
         search: z.string().optional(),
         status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
-        categoryId: uuidSchema.optional(),
-        instructorId: uuidSchema.optional(),
-    }),
-});
-
-export const courseIdParamSchema = z.object({
-    params: z.object({
-        courseId: uuidSchema,
+        categoryId: optionalPositiveBigInt,
+        instructorId: optionalPositiveBigInt,
     }),
 });
 
 export const assignInstructorSchema = z.object({
-    params: z.object({
-        courseId: uuidSchema,
-    }),
+    params: courseIdParamSchema.shape.params,
     body: z.object({
-        userId: uuidSchema,
+        userId: numericIdFromBody,
         isPrimary: z.boolean().optional(),
-    }),
-});
-
-export const removeInstructorParamSchema = z.object({
-    params: z.object({
-        courseId: uuidSchema,
-        userId: uuidSchema,
     }),
 });
 
@@ -94,3 +82,7 @@ export const createCategorySchema = z.object({
         description: z.string().optional(),
     }),
 });
+
+export const removeInstructorParamSchema = courseUserParamsSchema;
+
+export { courseIdParamSchema, courseUserParamsSchema };

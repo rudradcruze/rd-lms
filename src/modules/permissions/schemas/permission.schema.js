@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { permissionIdParamSchema } from "../../../utils/validationSchemas.js";
 
 export const createPermissionSchema = z.object({
     body: z.object({
@@ -17,8 +18,11 @@ export const createPermissionSchema = z.object({
 });
 
 export const updatePermissionSchema = z.object({
+    params: permissionIdParamSchema.shape.params,
     body: z.object({
         name: z.string().optional(),
         description: z.string().optional(),
     }),
 });
+
+export { permissionIdParamSchema };

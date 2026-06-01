@@ -4,6 +4,25 @@ import PermissionResolverService from "../../permissions/services/permissionReso
 import RoleRepository from "../repositories/role.repository.js";
 import { PREDEFINED_ROLES, ROLE_MESSAGES } from "../role.constants.js";
 
+function isNumericId(value) {
+    if (typeof value === "bigint") {
+        return true;
+    }
+    return /^\d+$/.test(String(value));
+}
+
+async function resolvePermission(permissionId) {
+    if (isNumericId(permissionId)) {
+        const permission = await PermissionRepository.findById(
+            BigInt(String(permissionId))
+        );
+        if (permission) {
+            return permission;
+        }
+    }
+    return PermissionRepository.findByKey(String(permissionId));
+}
+
 class RoleService {
     async createRole(roleData) {
         const { key, name, description } = roleData;
@@ -78,20 +97,20 @@ class RoleService {
             throw new ApiError(404, ROLE_MESSAGES.ROLE_NOT_FOUND);
         }
 
-        const permission = await PermissionRepository.findById(permissionId);
+        const permission = await resolvePermission(permissionId);
         if (!permission) {
             throw new ApiError(404, "Permission not found");
         }
 
         const already = await RoleRepository.hasPermission(
             roleId,
-            permissionId
+            permission.id
         );
         if (already) {
             throw new ApiError(400, "Permission already assigned to this role");
         }
 
-        await RoleRepository.assignPermission(roleId, permissionId);
+        await RoleRepository.assignPermission(roleId, permission.id);
 
         // Invalidate permission cache for all users with this role
         await PermissionResolverService.invalidateRoleCache(roleId);
@@ -103,17 +122,17 @@ class RoleService {
             throw new ApiError(404, ROLE_MESSAGES.ROLE_NOT_FOUND);
         }
 
-        const permission = await PermissionRepository.findById(permissionId);
+        const permission = await resolvePermission(permissionId);
         if (!permission) {
             throw new ApiError(404, "Permission not found");
         }
 
-        const has = await RoleRepository.hasPermission(roleId, permissionId);
+        const has = await RoleRepository.hasPermission(roleId, permission.id);
         if (!has) {
             throw new ApiError(400, "Permission not assigned to this role");
         }
 
-        await RoleRepository.revokePermission(roleId, permissionId);
+        await RoleRepository.revokePermission(roleId, permission.id);
 
         // Invalidate permission cache
         await PermissionResolverService.invalidateRoleCache(roleId);

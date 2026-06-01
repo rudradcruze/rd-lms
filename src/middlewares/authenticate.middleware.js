@@ -19,7 +19,7 @@ export const authenticate = async (req, res, next) => {
         }
 
         req.user = {
-            userId: decoded.userId,
+            userId: BigInt(decoded.userId),
             iat: decoded.iat,
             exp: decoded.exp,
         };
@@ -55,7 +55,7 @@ export const optionalAuthenticate = async (req, res, next) => {
         }
 
         req.user = {
-            userId: decoded.userId,
+            userId: BigInt(decoded.userId),
             iat: decoded.iat,
             exp: decoded.exp,
         };

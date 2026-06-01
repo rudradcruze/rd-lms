@@ -7,6 +7,8 @@ import RoleController from "../controllers/role.controller.js";
 import {
     assignPermissionSchema,
     createRoleSchema,
+    roleIdParamSchema,
+    rolePermissionParamsSchema,
     updateRoleSchema,
 } from "../schemas/role.schema.js";
 
@@ -118,8 +120,8 @@ router.get(
  *       - in: path
  *         name: roleId
  *         required: true
- *         schema: { type: string }
- *         description: Role UUID or key (e.g. "student")
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric role ID
  *     responses:
  *       200:
  *         description: Role details retrieved
@@ -141,6 +143,7 @@ router.get(
  */
 router.get(
     "/:roleId",
+    validate(roleIdParamSchema),
     asyncHandler((req, res) => RoleController.getRoleById(req, res))
 );
 
@@ -156,8 +159,8 @@ router.get(
  *       - in: path
  *         name: roleId
  *         required: true
- *         schema: { type: string }
- *         description: Role UUID or key
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric role ID
  *     requestBody:
  *       required: true
  *       content:
@@ -198,8 +201,8 @@ router.put(
  *       - in: path
  *         name: roleId
  *         required: true
- *         schema: { type: string }
- *         description: Role UUID or key
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric role ID
  *     responses:
  *       200:
  *         description: Role deleted successfully
@@ -211,6 +214,7 @@ router.put(
 router.delete(
     "/:roleId",
     authorize(["super_admin"]),
+    validate(roleIdParamSchema),
     asyncHandler((req, res) => RoleController.deleteRole(req, res))
 );
 
@@ -226,8 +230,8 @@ router.delete(
  *       - in: path
  *         name: roleId
  *         required: true
- *         schema: { type: string }
- *         description: Role UUID or key
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric role ID
  *     requestBody:
  *       required: true
  *       content:
@@ -238,7 +242,7 @@ router.delete(
  *             properties:
  *               permissionId:
  *                 type: string
- *                 description: Permission UUID or key (e.g. "courses.read")
+ *                 description: Numeric permission ID or key (e.g. "courses.read")
  *                 example: courses.read
  *     responses:
  *       200:
@@ -269,13 +273,13 @@ router.post(
  *       - in: path
  *         name: roleId
  *         required: true
- *         schema: { type: string }
- *         description: Role UUID or key
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric role ID
  *       - in: path
  *         name: permissionId
  *         required: true
- *         schema: { type: string }
- *         description: Permission UUID or key
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric permission ID
  *     responses:
  *       200:
  *         description: Permission revoked from role successfully
@@ -287,6 +291,7 @@ router.post(
 router.delete(
     "/:roleId/permissions/:permissionId",
     authorize(["super_admin"]),
+    validate(rolePermissionParamsSchema),
     asyncHandler((req, res) =>
         RoleController.revokePermissionFromRole(req, res)
     )

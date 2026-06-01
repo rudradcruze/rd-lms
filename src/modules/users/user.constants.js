@@ -1,9 +1,9 @@
 export const USER_MESSAGES = {
     USER_NOT_FOUND: "User not found",
     ROLE_NOT_FOUND:
-        'Role not found. Provide a valid role UUID or key (e.g. "admin", "instructor", "student").',
+        'Role not found. Provide a valid role ID or key (e.g. "admin", "instructor", "student").',
     PERMISSION_NOT_FOUND:
-        "Permission not found. Provide a valid permission UUID or key.",
+        "Permission not found. Provide a valid permission ID or key.",
     ROLE_ASSIGNED: "Role assigned successfully",
     ROLE_REMOVED: "Role removed successfully",
     PERMISSION_GRANTED: "Permission granted successfully",

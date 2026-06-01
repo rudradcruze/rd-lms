@@ -135,14 +135,14 @@ To manually verify the core features of the RD-LMS backend without using command
 ### Recipe E: Assign & Revoke Roles
 1. Locate `POST /api/v1/users/{userId}/roles` under User management.
 2. Provide the `userId` noted from Recipe B in the path.
-3. In the request body, pass `{"roleId": "user"}` (the API robustly accepts either the role's UUID or role key).
+3. In the request body, pass `{"roleId": "instructor"}` (accepts either numeric role ID or role key).
 4. Click **"Execute"**.
 5. **Expected Result**: The role is successfully assigned and the user's active permissions cache in Redis is automatically invalidated.
 6. To revoke, locate `DELETE /api/v1/users/{userId}/roles/{roleId}` and execute with the `userId` and role key `user`.
 
 ### Recipe F: Test Fine-Grained Permission Overrides
 1. Locate `POST /api/v1/users/{userId}/permissions` to grant a permission override.
-2. In the request body, pass `{"permissionId": "users.read"}` (accepts either key or UUID).
+2. In the request body, pass `{"permissionId": "users.read"}` (accepts either numeric permission ID or key).
 3. **Expected Result**: The permission `users.read` is successfully added to the user's explicit allowed list, immediately invalidating their Redis cache.
 4. To test explicit deny: locate `POST /api/v1/users/{userId}/permissions/{permissionId}/deny` and execute. This flips `allowed: false` in the database, overriding any role memberships in real time!
 

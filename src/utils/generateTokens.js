@@ -6,7 +6,11 @@ import crypto from "crypto";
 
 export const generateAccessToken = (userId, tokenVersion = 0) => {
     return jwt.sign(
-        { userId, jti: crypto.randomUUID(), tv: tokenVersion },
+        {
+            userId: String(userId),
+            jti: crypto.randomUUID(),
+            tv: tokenVersion,
+        },
         config.jwt.accessSecret,
         {
             expiresIn: ACCESS_TOKEN_EXPIRY,
@@ -16,7 +20,7 @@ export const generateAccessToken = (userId, tokenVersion = 0) => {
 
 export const generateRefreshToken = (userId) => {
     return jwt.sign(
-        { userId, jti: crypto.randomUUID() },
+        { userId: String(userId), jti: crypto.randomUUID() },
         config.jwt.refreshSecret,
         {
             expiresIn: REFRESH_TOKEN_EXPIRY,

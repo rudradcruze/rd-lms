@@ -1,14 +1,24 @@
 import { z } from "zod";
+import {
+    permissionIdBody,
+    positiveBigIntParam,
+    roleIdBody,
+    userIdParamSchema,
+    userPermissionParamsSchema,
+    userRoleParamsSchema,
+} from "../../../utils/validationSchemas.js";
 
 export const assignRoleSchema = z.object({
+    params: userIdParamSchema.shape.params,
     body: z.object({
-        roleId: z.string().min(1, "Role ID is required"),
+        roleId: roleIdBody,
     }),
 });
 
 export const grantPermissionSchema = z.object({
+    params: userIdParamSchema.shape.params,
     body: z.object({
-        permissionId: z.string().min(1, "Permission ID is required"),
+        permissionId: permissionIdBody,
     }),
 });
 
@@ -29,3 +39,10 @@ export const onboardUserSchema = z.object({
         role: z.string().min(1, "Role is required"),
     }),
 });
+
+export {
+    userIdParamSchema,
+    userRoleParamsSchema,
+    userPermissionParamsSchema,
+    positiveBigIntParam,
+};

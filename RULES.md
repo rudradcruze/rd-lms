@@ -137,8 +137,8 @@ Derived from current code. These are mandatory for future agent work in this rep
 - Use seeded credentials from `tests/helpers/setup.js` for role-based behavior tests.
     <!-- Derived from: tests/helpers/setup.js -->
 
-- Keep coverage for auth flows, role management, user management, course management, and error envelope regressions.
-    <!-- Derived from: tests/auth.test.js, tests/roles.test.js, tests/users.test.js, tests/courses.test.js -->
+- Keep coverage for auth flows, role management, user management, permission management, course management, and error envelope regressions.
+    <!-- Derived from: tests/auth.test.js, tests/roles.test.js, tests/users.test.js, tests/permissions.test.js, tests/courses.test.js -->
 
 ## 12) Config/Formatting Rules
 
@@ -150,13 +150,30 @@ Derived from current code. These are mandatory for future agent work in this rep
 
 ## 13) Known Constraints / Guardrails
 
-- Route comments and Swagger may claim UUID-or-key support for some params, but several services currently perform ID-only lookup. Do not assume key support unless service/repository confirms it.
-    <!-- Derived from: src/modules/roles/routes/role.routes.js, src/modules/permissions/routes/permission.routes.js, src/modules/roles/services/role.service.js, src/modules/permissions/services/permission.service.js -->
+- Path parameters (`:userId`, `:roleId`, `:permissionId`, `:courseId`) require numeric BigInt IDs via `positiveBigIntParam`. Role/permission keys are allowed in **request bodies** only (assign role, grant permission).
+    <!-- Derived from: src/utils/validationSchemas.js, src/modules/users/services/user.service.js -->
 
 - Rate limiter bypasses `development` and `test`; behavior in local dev differs from production.
     <!-- Derived from: src/middlewares/rateLimit.middleware.js -->
 
-## 14) Mandatory Post-Feature Workflow
+## 14) Identifier Strategy (mandatory)
+
+- All Prisma entities must use `id BigInt @id @default(autoincrement())`. UUID primary keys are prohibited.
+    <!-- Derived from: prisma/schema.prisma -->
+
+- All foreign keys must use `BigInt`.
+    <!-- Derived from: prisma/schema.prisma -->
+
+- Route parameters must validate positive integer BigInt IDs (`src/utils/validationSchemas.js` → `positiveBigIntParam`).
+    <!-- Derived from: src/utils/validationSchemas.js, route validate() middleware -->
+
+- API responses serialize BigInt IDs as strings globally via `serializeBigInt` in `src/app.js`. Controllers must not manually convert IDs.
+    <!-- Derived from: src/utils/serializeBigInt.js, src/app.js -->
+
+- JWT payloads store `userId` as a string; `authenticate` sets `req.user.userId` as `BigInt`.
+    <!-- Derived from: src/utils/generateTokens.js, src/middlewares/authenticate.middleware.js -->
+
+## 15) Mandatory Post-Feature Workflow
 
 1. Implement the feature with the module/repository/service/controller patterns above.
 2. Add or update tests in `tests/` for the new/changed behavior.

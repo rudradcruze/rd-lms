@@ -318,6 +318,26 @@ describe("Courses API", () => {
 
     // ── Validation ────────────────────────────────────────────────────────────
     describe("Validation", () => {
+        it("rejects non-numeric courseId", async () => {
+            const res = await request.get("/api/v1/courses/abc");
+            expect(res.status).toBe(400);
+        });
+
+        it("rejects decimal courseId", async () => {
+            const res = await request.get("/api/v1/courses/1.5");
+            expect(res.status).toBe(400);
+        });
+
+        it("rejects negative courseId", async () => {
+            const res = await request.get("/api/v1/courses/-1");
+            expect(res.status).toBe(400);
+        });
+
+        it("rejects zero courseId", async () => {
+            const res = await request.get("/api/v1/courses/0");
+            expect(res.status).toBe(400);
+        });
+
         it("invalid category rejected", async () => {
             const res = await request
                 .post("/api/v1/courses")
@@ -325,7 +345,7 @@ describe("Courses API", () => {
                 .send({
                     title: "Invalid Category Course",
                     description: "Test",
-                    categoryId: "00000000-0000-0000-0000-000000000000",
+                    categoryId: "999999999",
                 });
             expect(res.status).toBe(404);
         });

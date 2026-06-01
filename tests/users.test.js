@@ -11,6 +11,9 @@ describe("Users API", () => {
     let adminToken;
     let studentToken;
     let studentUserId;
+    let instructorRoleId;
+    let coursesReadPermissionId;
+    let coursesCreatePermissionId;
 
     beforeAll(async () => {
         await ensureConnected();
@@ -35,6 +38,32 @@ describe("Users API", () => {
             throw new Error(`Student with email ${CREDS.student.email} not found in seeded users.`);
         }
         studentUserId = student.id;
+
+        const rolesRes = await request
+            .get("/api/v1/roles?limit=100")
+            .set("Authorization", `Bearer ${superAdminToken}`);
+        const instructorRole = rolesRes.body.data.roles.find(
+            (r) => r.key === "instructor"
+        );
+        if (!instructorRole) {
+            throw new Error("Instructor role not found in seeded roles.");
+        }
+        instructorRoleId = instructorRole.id;
+
+        const permsRes = await request
+            .get("/api/v1/permissions?limit=100")
+            .set("Authorization", `Bearer ${superAdminToken}`);
+        const coursesRead = permsRes.body.data.permissions.find(
+            (p) => p.key === "courses.read"
+        );
+        const coursesCreate = permsRes.body.data.permissions.find(
+            (p) => p.key === "courses.create"
+        );
+        if (!coursesRead || !coursesCreate) {
+            throw new Error("Expected courses.read and courses.create permissions in seed.");
+        }
+        coursesReadPermissionId = coursesRead.id;
+        coursesCreatePermissionId = coursesCreate.id;
     });
 
     afterAll(async () => {
@@ -84,9 +113,37 @@ describe("Users API", () => {
 
         it("returns 404 for non-existent userId", async () => {
             const res = await request
-                .get("/api/v1/users/00000000-0000-0000-0000-000000000000")
+                .get("/api/v1/users/999999999")
                 .set("Authorization", `Bearer ${adminToken}`);
             expect(res.status).toBe(404);
+        });
+
+        it("rejects non-numeric userId", async () => {
+            const res = await request
+                .get("/api/v1/users/abc")
+                .set("Authorization", `Bearer ${adminToken}`);
+            expect(res.status).toBe(400);
+        });
+
+        it("rejects decimal userId", async () => {
+            const res = await request
+                .get("/api/v1/users/1.5")
+                .set("Authorization", `Bearer ${adminToken}`);
+            expect(res.status).toBe(400);
+        });
+
+        it("rejects negative userId", async () => {
+            const res = await request
+                .get("/api/v1/users/-1")
+                .set("Authorization", `Bearer ${adminToken}`);
+            expect(res.status).toBe(400);
+        });
+
+        it("rejects zero userId", async () => {
+            const res = await request
+                .get("/api/v1/users/0")
+                .set("Authorization", `Bearer ${adminToken}`);
+            expect(res.status).toBe(400);
         });
     });
 
@@ -204,7 +261,9 @@ describe("Users API", () => {
     describe("DELETE /api/v1/users/:userId/roles/:roleId", () => {
         it("super_admin can remove instructor role", async () => {
             const res = await request
-                .delete(`/api/v1/users/${studentUserId}/roles/instructor`)
+                .delete(
+                    `/api/v1/users/${studentUserId}/roles/${instructorRoleId}`
+                )
                 .set("Authorization", `Bearer ${superAdminToken}`);
             expect(res.status).toBe(200);
         });
@@ -243,7 +302,7 @@ describe("Users API", () => {
         it("super_admin can deny a permission for a student", async () => {
             const res = await request
                 .post(
-                    `/api/v1/users/${studentUserId}/permissions/courses.read/deny`
+                    `/api/v1/users/${studentUserId}/permissions/${coursesReadPermissionId}/deny`
                 )
                 .set("Authorization", `Bearer ${superAdminToken}`);
             expect(res.status).toBe(200);
@@ -252,7 +311,7 @@ describe("Users API", () => {
         it("super_admin can revoke the permission override", async () => {
             const res = await request
                 .delete(
-                    `/api/v1/users/${studentUserId}/permissions/courses.create`
+                    `/api/v1/users/${studentUserId}/permissions/${coursesCreatePermissionId}`
                 )
                 .set("Authorization", `Bearer ${superAdminToken}`);
             expect(res.status).toBe(200);

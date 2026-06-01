@@ -13,6 +13,8 @@ import UserRepository from "../../users/repositories/user.repository.js";
 import { invalidateAccessTokens, getAccessTokenVersion } from "../utils/tokenSession.js";
 import RefreshTokenRepository from "../repositories/refresh-token.repository.js";
 
+const toUserId = (decoded) => BigInt(decoded.userId);
+
 class AuthService {
     async register(registerData) {
         const { username, email, pass, firstname, lastname } = registerData;
@@ -180,12 +182,13 @@ class AuthService {
     async refreshToken(token) {
         try {
             const decoded = verifyRefreshToken(token);
+            const userId = toUserId(decoded);
             const tokenHash = this.hashToken(token);
 
             let isCachedValid = false;
 
             try {
-                const cachedVal = await redisClient.get(`refresh:${decoded.userId}:${tokenHash}`);
+                const cachedVal = await redisClient.get(`refresh:${userId}:${tokenHash}`);
                 if (cachedVal) {
                     isCachedValid = true;
                 }
@@ -206,7 +209,7 @@ class AuthService {
                 }
             }
 
-            const user = await UserRepository.findById(decoded.userId);
+            const user = await UserRepository.findById(userId);
             if (!user) {
                 throw new ApiError(
                     AUTH_ERRORS.USER_NOT_FOUND.statusCode,
@@ -216,8 +219,8 @@ class AuthService {
 
             // Invalidate the old refresh token in Redis
             try {
-                await redisClient.del(`refresh:${decoded.userId}:${tokenHash}`);
-                await redisClient.sRem(`user:${decoded.userId}:refreshes`, tokenHash);
+                await redisClient.del(`refresh:${userId}:${tokenHash}`);
+                await redisClient.sRem(`user:${userId}:refreshes`, tokenHash);
             } catch (error) {
                 logger.warn(`Failed to delete refresh token from Redis: ${error.message}`);
             }
@@ -251,12 +254,13 @@ class AuthService {
     async generateAccessTokenFromRefreshToken(token) {
         try {
             const decoded = verifyRefreshToken(token);
+            const userId = toUserId(decoded);
             const tokenHash = this.hashToken(token);
 
             let isCachedValid = false;
 
             try {
-                const cachedVal = await redisClient.get(`refresh:${decoded.userId}:${tokenHash}`);
+                const cachedVal = await redisClient.get(`refresh:${userId}:${tokenHash}`);
                 if (cachedVal) {
                     isCachedValid = true;
                 }
@@ -277,7 +281,7 @@ class AuthService {
                 }
             }
 
-            const user = await UserRepository.findById(decoded.userId);
+            const user = await UserRepository.findById(userId);
             if (!user) {
                 throw new ApiError(
                     AUTH_ERRORS.USER_NOT_FOUND.statusCode,

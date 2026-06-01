@@ -1,6 +1,6 @@
 # MEMORY
 
-Last updated: 2026-05-31
+Last updated: 2026-06-01
 
 ## 1) Stack (from `package.json`)
 
@@ -43,6 +43,7 @@ Scripts:
   - `utils/`
     - `ApiError.js`, `ApiResponse.js`, `asyncHandler.js`
     - `generateTokens.js`, `password.js`, `pagination.js`, `dateTime.js`
+    - `serializeBigInt.js`, `validationSchemas.js`
   - `modules/`
     - `auth/` -> constants, routes, schemas, controller, service, refresh-token repo, tokenSession utils
     - `users/` -> constants, routes, schemas, controller, service, repository
@@ -52,10 +53,10 @@ Scripts:
 - `prisma/`
   - `schema.prisma`
   - `seed.js`
-  - `migrations/` (5 SQL migrations + lock)
+  - `migrations/` (fresh `init_bigint_identifiers` migration + lock)
 - `tests/`
   - `helpers/setup.js`
-  - `auth.test.js`, `roles.test.js`, `users.test.js`, `courses.test.js`
+  - `auth.test.js`, `roles.test.js`, `users.test.js`, `permissions.test.js`, `courses.test.js`
 - Root config/docs:
   - `README.md`, `.env.example`, `jest.config.js`, `.prettierrc`, `.prettierignore`, `.gitignore`
   - `package.json`, `package-lock.json`
@@ -65,7 +66,7 @@ Scripts:
 ## 3) Database Models / Schema (`prisma/schema.prisma`)
 
 ### `User` (`users`)
-- `id` UUID PK
+- `id` BigInt PK (autoincrement)
 - `username` varchar(16), unique
 - `email` unique
 - `passwordHash` mapped `password_hash`
@@ -81,21 +82,21 @@ Scripts:
   - one-to-many `courseInstructors`
 
 ### `UserInfo` (`user_info`)
-- `id` UUID PK
-- `userId` UUID unique FK -> `users.id` (cascade)
+- `id` BigInt PK (autoincrement)
+- `userId` BigInt unique FK -> `users.id` (cascade)
 - `firstName`, `lastName`
 - timestamps
 
 ### `RefreshToken` (`refresh_tokens`)
-- `id` UUID PK
-- `userId` UUID FK -> `users.id` (cascade)
+- `id` BigInt PK (autoincrement)
+- `userId` BigInt FK -> `users.id` (cascade)
 - `tokenHash` unique
 - `expiresAt`
 - `blacklistedAt` nullable
 - timestamps
 
 ### `Role` (`roles`)
-- `id` UUID PK
+- `id` BigInt PK (autoincrement)
 - `name` unique
 - `key` unique
 - `description` nullable
@@ -103,7 +104,7 @@ Scripts:
 - relations: `userRoles`, `rolePermissions`
 
 ### `Permission` (`permissions`)
-- `id` UUID PK
+- `id` BigInt PK (autoincrement)
 - `name` unique
 - `key` unique
 - `resource`, `action`
@@ -112,57 +113,57 @@ Scripts:
 - relations: `rolePermissions`, `userPermissions`
 
 ### `UserRole` (`user_roles`)
-- `id` UUID PK
-- `userId` FK -> `users.id` (cascade)
-- `roleId` FK -> `roles.id` (cascade)
+- `id` BigInt PK (autoincrement)
+- `userId` BigInt FK -> `users.id` (cascade)
+- `roleId` BigInt FK -> `roles.id` (cascade)
 - timestamps
 - unique composite: `(userId, roleId)` (`unique_user_role`)
 
 ### `RolePermission` (`role_permissions`)
-- `id` UUID PK
-- `roleId` FK -> `roles.id` (cascade)
-- `permissionId` FK -> `permissions.id` (cascade)
+- `id` BigInt PK (autoincrement)
+- `roleId` BigInt FK -> `roles.id` (cascade)
+- `permissionId` BigInt FK -> `permissions.id` (cascade)
 - timestamps
 - unique composite: `(roleId, permissionId)` (`unique_role_permission`)
 
 ### `UserPermission` (`user_permissions`)
-- `id` UUID PK
-- `userId` FK -> `users.id` (cascade)
-- `permissionId` FK -> `permissions.id` (cascade)
+- `id` BigInt PK (autoincrement)
+- `userId` BigInt FK -> `users.id` (cascade)
+- `permissionId` BigInt FK -> `permissions.id` (cascade)
 - `allowed` bool default true
 - timestamps
 - unique composite: `(userId, permissionId)` (`unique_user_permission`)
 
 ### `CourseCategory` (`course_categories`)
-- `id` UUID PK
+- `id` BigInt PK (autoincrement)
 - `name` unique
 - `description` nullable
 - timestamps
 - relations: one-to-many `courses`
 
 ### `Course` (`courses`)
-- `id` UUID PK
+- `id` BigInt PK (autoincrement)
 - `title`, `slug` unique
 - `shortDescription`, `description`, `thumbnailUrl` nullable
 - `status` enum `CourseStatus` (`DRAFT`, `PUBLISHED`, `ARCHIVED`) default `DRAFT`
-- `categoryId` nullable FK -> `course_categories.id` (set null on delete)
-- `createdById` FK -> `users.id` (restrict)
+- `categoryId` nullable BigInt FK -> `course_categories.id` (set null on delete)
+- `createdById` BigInt FK -> `users.id` (restrict)
 - `deletedAt` nullable (soft delete)
 - timestamps
 - indexes: `status`, `categoryId`
 - relations: `category`, `creator`, `instructors`, `settings`
 
 ### `CourseInstructor` (`course_instructors`)
-- `id` UUID PK
-- `courseId` FK -> `courses.id` (cascade)
-- `userId` FK -> `users.id` (cascade)
+- `id` BigInt PK (autoincrement)
+- `courseId` BigInt FK -> `courses.id` (cascade)
+- `userId` BigInt FK -> `users.id` (cascade)
 - `isPrimary` bool default false
 - `createdAt`
 - unique composite: `(courseId, userId)` (`unique_course_instructor`)
 
 ### `CourseSettings` (`course_settings`)
-- `id` UUID PK
-- `courseId` unique FK -> `courses.id` (cascade)
+- `id` BigInt PK (autoincrement)
+- `courseId` BigInt unique FK -> `courses.id` (cascade)
 - `allowSelfEnrollment` bool default true
 - `requiresApproval` bool default false
 - `showInCatalog` bool default true
@@ -319,6 +320,7 @@ Course permission role mappings (seed):
 Success (`ApiResponse`):
 - JSON fields: `statusCode`, `data`, `message`, `success`
 - `success = statusCode < 400`
+- Global `serializeBigInt` middleware in `app.js` converts all `BigInt` values in JSON responses to strings (controllers must not convert IDs manually).
 
 Error (`error.middleware.js` + `ApiError`):
 - JSON fields: `success`, `statusCode`, `message`, `errors`
@@ -365,11 +367,19 @@ Seed behavior:
   - `student2@rd-lms.com`
 - Assigns role-permission matrix per `ROLE_PERMISSIONS`.
 - Seeds 4 default course categories: Programming, Data Science, Mathematics, Business.
+- Seeds 4 demo courses (with `course_settings` and `course_instructors` per course): e.g. `intro-to-javascript`, `python-for-data-science` (published), `calculus-essentials` (draft), `business-fundamentals` (admin creator + instructor1 co-instructor).
+- Seeds user permission overrides: `student1` ALLOW `courses.create`; `student2` DENY `courses.read`.
 
 ## 11) Validation
 
 Library:
 - `zod`
+
+Shared ID helpers (`src/utils/validationSchemas.js`):
+- `positiveBigIntParam` — route/query IDs: digits-only string → positive `BigInt` (rejects `abc`, `1.5`, `-1`, `0`).
+- `optionalPositiveBigInt` — optional query FKs.
+- `roleIdBody` / `permissionIdBody` — request body: numeric ID **or** stable key string (e.g. `"instructor"`, `"courses.read"`).
+- Param schemas: `userIdParamSchema`, `roleIdParamSchema`, `permissionIdParamSchema`, `courseIdParamSchema`, and composite variants.
 
 Schema locations:
 - `src/modules/auth/schemas/auth.schema.js`
@@ -379,7 +389,8 @@ Schema locations:
 - `src/modules/courses/schemas/courses.schema.js`
 
 Application pattern:
-- Route-level `validate(schema)` middleware before controller.
+- Route-level `validate(schema)` middleware before controller; coerced `params` merged back into `req.params` as strings for Prisma.
+- Path parameters (`:userId`, `:roleId`, `:permissionId`, `:courseId`) require numeric IDs only.
 - Validation issues transformed to:
   - `{ field: "<path>", message: "<msg>" }[]`
 
@@ -405,16 +416,16 @@ Framework/pattern:
   - `getToken(email,password)` utility
 
 Coverage areas:
-- `tests/auth.test.js`: register/login/refresh/access/logout/password-change/check-availability, fallback error envelope checks.
-- `tests/roles.test.js`: role CRUD + role-permission assignment auth checks.
-- `tests/users.test.js`: user listing/filtering, block/unblock, activate/deactivate, role assignment safeguards, user permission overrides, onboarding.
+- `tests/auth.test.js`: register/login/refresh/access/logout/password-change/check-availability, fallback error envelope checks; IDs serialized as strings.
+- `tests/roles.test.js`: role CRUD + role-permission assignment auth checks; BigInt path param validation matrix.
+- `tests/users.test.js`: user listing/filtering, block/unblock, activate/deactivate, role assignment safeguards, user permission overrides, onboarding; BigInt path param validation matrix.
+- `tests/permissions.test.js`: permission CRUD + auth guards; BigInt path param validation matrix.
 - `tests/courses.test.js`: course CRUD lifecycle, publishing ownership, listing visibility, instructor assignment, soft delete, validation.
 
 ## 14) Observed Inconsistencies / Clarifications
 
 - ⚠️ `validate` writes normalized data to `req.validatedData`, but controllers/services mostly read `req.body`/`req.query` directly (validation still runs but sanitized values are unused).
-- ⚠️ Role/permission routes and Swagger comments say `:roleId` / `:permissionId` can be UUID or key; services mostly call repository `findById` (UUID lookup). Key-based path params may fail.
-- ⚠️ `RoleService.assignPermissionToRole` and `revokePermissionFromRole` resolve permission by ID only; Swagger/docs suggest key also works.
+- Path params are numeric BigInt IDs only; role/permission **keys** are accepted in request bodies (assign role, grant permission) via `roleIdBody` / `permissionIdBody`.
 - ⚠️ `src/modules/permissions/permission.constants.js` predefined permissions list (12 items) does not match fuller 29-permission seed source in `prisma/seed.js`.
 - ⚠️ `README.md` says rate limiting applies to login/register; middleware bypasses limits in both `development` and `test`.
 - ⚠️ In `src/configurations/environment.js`, `PORT` is mandatory even though `src/constants.js` has fallback `8000`; missing `PORT` still throws.
@@ -423,6 +434,7 @@ Coverage areas:
 
 | Date | Author | Change |
 |---|---|---|
+| 2026-06-01 | Agent | Platform identifier strategy updated from UUID to BigInt auto-increment identifiers. |
 | 2026-05-31 | Agent | Centralized OpenAPI component schemas in `swagger.schemas.js`; route JSDoc uses `$ref` for request/response models; RULES.md section 8 documents Swagger workflow. |
 | 2026-05-31 | Agent | Implemented BR-02 courses module: Prisma models, seed categories, full API at `/api/v1/courses`, instructor role no longer has `courses.delete`. |
 | 2026-05-29 | Codex | Initial full-codebase audit and architecture memory creation from current repository state. |

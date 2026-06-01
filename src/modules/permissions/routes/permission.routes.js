@@ -6,6 +6,7 @@ import { asyncHandler } from "../../../utils/asyncHandler.js";
 import PermissionController from "../controllers/permission.controller.js";
 import {
     createPermissionSchema,
+    permissionIdParamSchema,
     updatePermissionSchema,
 } from "../schemas/permission.schema.js";
 
@@ -111,8 +112,8 @@ router.get(
  *       - in: path
  *         name: permissionId
  *         required: true
- *         schema: { type: string }
- *         description: Permission UUID or key (e.g. "courses.read")
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric permission ID
  *     responses:
  *       200:
  *         description: Permission details retrieved
@@ -134,6 +135,7 @@ router.get(
  */
 router.get(
     "/:permissionId",
+    validate(permissionIdParamSchema),
     asyncHandler((req, res) => PermissionController.getPermissionById(req, res))
 );
 
@@ -149,8 +151,8 @@ router.get(
  *       - in: path
  *         name: permissionId
  *         required: true
- *         schema: { type: string }
- *         description: Permission UUID or key
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric permission ID
  *     requestBody:
  *       required: true
  *       content:
@@ -191,8 +193,8 @@ router.put(
  *       - in: path
  *         name: permissionId
  *         required: true
- *         schema: { type: string }
- *         description: Permission UUID or key
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric permission ID
  *     responses:
  *       200:
  *         description: Permission deleted successfully
@@ -204,6 +206,7 @@ router.put(
 router.delete(
     "/:permissionId",
     authorize(["super_admin"]),
+    validate(permissionIdParamSchema),
     asyncHandler((req, res) => PermissionController.deletePermission(req, res))
 );
 

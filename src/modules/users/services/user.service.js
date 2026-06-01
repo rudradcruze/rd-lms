@@ -8,35 +8,39 @@ import UserRepository from "../repositories/user.repository.js";
 import { USER_MESSAGES } from "../user.constants.js";
 import { hashPassword } from "../../../utils/password.js";
 
-const UUID_REGEX =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/**
- * Resolve a role by UUID or key string
- */
-async function resolveRole(roleId) {
-    let role = null;
-    if (UUID_REGEX.test(roleId)) {
-        role = await RoleRepository.findById(roleId);
+function isNumericId(value) {
+    if (typeof value === "bigint") {
+        return true;
     }
-    if (!role) {
-        role = await RoleRepository.findByKey(roleId);
-    }
-    return role;
+    return /^\d+$/.test(String(value));
 }
 
 /**
- * Resolve a permission by UUID or key string
+ * Resolve a role by numeric ID or key string
+ */
+async function resolveRole(roleId) {
+    if (isNumericId(roleId)) {
+        const role = await RoleRepository.findById(BigInt(String(roleId)));
+        if (role) {
+            return role;
+        }
+    }
+    return RoleRepository.findByKey(String(roleId));
+}
+
+/**
+ * Resolve a permission by numeric ID or key string
  */
 async function resolvePermission(permissionId) {
-    let permission = null;
-    if (UUID_REGEX.test(permissionId)) {
-        permission = await PermissionRepository.findById(permissionId);
+    if (isNumericId(permissionId)) {
+        const permission = await PermissionRepository.findById(
+            BigInt(String(permissionId))
+        );
+        if (permission) {
+            return permission;
+        }
     }
-    if (!permission) {
-        permission = await PermissionRepository.findByKey(permissionId);
-    }
-    return permission;
+    return PermissionRepository.findByKey(String(permissionId));
 }
 
 class UserService {
@@ -74,7 +78,7 @@ class UserService {
         if (!role) {
             throw new ApiError(
                 404,
-                `Role not found. Provide a valid role UUID or key (e.g. "admin", "instructor", "student").`
+                USER_MESSAGES.ROLE_NOT_FOUND
             );
         }
 
@@ -245,7 +249,7 @@ class UserService {
         if (!role) {
             throw new ApiError(
                 404,
-                `Role not found. Provide a valid role UUID or key (e.g. "admin", "instructor", "student").`
+                USER_MESSAGES.ROLE_NOT_FOUND
             );
         }
 

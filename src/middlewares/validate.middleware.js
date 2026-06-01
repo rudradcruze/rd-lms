@@ -58,6 +58,13 @@ const validate = (schema) =>
             throw new ApiError(400, "Validation failed", validationErrors);
         }
 
+        if (validatedData.params) {
+            for (const [key, value] of Object.entries(validatedData.params)) {
+                req.params[key] =
+                    typeof value === "bigint" ? value.toString() : value;
+            }
+        }
+
         req.validatedData =
             Object.keys(schemaMap).length === 1 && schemaMap.body
                 ? validatedData.body

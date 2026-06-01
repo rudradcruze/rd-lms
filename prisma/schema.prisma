@@ -14,7 +14,7 @@ enum CourseStatus {
 }
 
 model User {
-  id                String             @id @default(uuid()) @db.Uuid
+  id                BigInt             @id @default(autoincrement())
   username          String             @unique @db.VarChar(16)
   email             String             @unique
   passwordHash      String             @map("password_hash")
@@ -33,13 +33,13 @@ model User {
 }
 
 model RefreshToken {
-  id            String   @id @default(uuid()) @db.Uuid
-  userId        String   @map("user_id") @db.Uuid
-  tokenHash     String   @unique @map("token_hash")
-  expiresAt     DateTime @map("expires_at")
+  id            BigInt    @id @default(autoincrement())
+  userId        BigInt    @map("user_id")
+  tokenHash     String    @unique @map("token_hash")
+  expiresAt     DateTime  @map("expires_at")
   blacklistedAt DateTime? @map("blacklisted_at")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -47,27 +47,27 @@ model RefreshToken {
 }
 
 model Role {
-  id               String            @id @default(uuid()) @db.Uuid
-  name             String            @unique
-  key              String            @unique
-  description      String?
-  createdAt        DateTime          @default(now()) @map("created_at")
-  updatedAt        DateTime          @updatedAt @map("updated_at")
-  userRoles        UserRole[]
-  rolePermissions  RolePermission[]
+  id              BigInt           @id @default(autoincrement())
+  name            String           @unique
+  key             String           @unique
+  description     String?
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
 
   @@map("roles")
 }
 
 model Permission {
-  id              String            @id @default(uuid()) @db.Uuid
-  name            String            @unique
-  key             String            @unique
+  id              BigInt           @id @default(autoincrement())
+  name            String           @unique
+  key             String           @unique
   resource        String
   action          String
   description     String?
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @updatedAt @map("updated_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
   rolePermissions RolePermission[]
   userPermissions UserPermission[]
 
@@ -75,9 +75,9 @@ model Permission {
 }
 
 model UserRole {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  roleId    String   @map("role_id") @db.Uuid
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  roleId    BigInt   @map("role_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -89,9 +89,9 @@ model UserRole {
 }
 
 model RolePermission {
-  id           String   @id @default(uuid()) @db.Uuid
-  roleId       String   @map("role_id") @db.Uuid
-  permissionId String   @map("permission_id") @db.Uuid
+  id           BigInt   @id @default(autoincrement())
+  roleId       BigInt   @map("role_id")
+  permissionId BigInt   @map("permission_id")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -103,9 +103,9 @@ model RolePermission {
 }
 
 model UserPermission {
-  id           String   @id @default(uuid()) @db.Uuid
-  userId       String   @map("user_id") @db.Uuid
-  permissionId String   @map("permission_id") @db.Uuid
+  id           BigInt   @id @default(autoincrement())
+  userId       BigInt   @map("user_id")
+  permissionId BigInt   @map("permission_id")
   allowed      Boolean  @default(true)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -118,8 +118,8 @@ model UserPermission {
 }
 
 model UserInfo {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @unique @map("user_id") @db.Uuid
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @unique @map("user_id")
   firstName String   @map("first_name")
   lastName  String   @map("last_name")
   createdAt DateTime @default(now()) @map("created_at")
@@ -131,7 +131,7 @@ model UserInfo {
 }
 
 model CourseCategory {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          BigInt   @id @default(autoincrement())
   name        String   @unique
   description String?
   createdAt   DateTime @default(now()) @map("created_at")
@@ -142,15 +142,15 @@ model CourseCategory {
 }
 
 model Course {
-  id               String             @id @default(uuid()) @db.Uuid
+  id               BigInt             @id @default(autoincrement())
   title            String
   slug             String             @unique
   shortDescription String?            @map("short_description")
   description      String?
   thumbnailUrl     String?            @map("thumbnail_url")
   status           CourseStatus       @default(DRAFT)
-  categoryId       String?            @map("category_id") @db.Uuid
-  createdById      String             @map("created_by_id") @db.Uuid
+  categoryId       BigInt?            @map("category_id")
+  createdById      BigInt             @map("created_by_id")
   deletedAt        DateTime?          @map("deleted_at")
   createdAt        DateTime           @default(now()) @map("created_at")
   updatedAt        DateTime           @updatedAt @map("updated_at")
@@ -165,9 +165,9 @@ model Course {
 }
 
 model CourseInstructor {
-  id        String   @id @default(uuid()) @db.Uuid
-  courseId  String   @map("course_id") @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
+  id        BigInt   @id @default(autoincrement())
+  courseId  BigInt   @map("course_id")
+  userId    BigInt   @map("user_id")
   isPrimary Boolean  @default(false) @map("is_primary")
   createdAt DateTime @default(now()) @map("created_at")
   course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -178,8 +178,8 @@ model CourseInstructor {
 }
 
 model CourseSettings {
-  id                  String   @id @default(uuid()) @db.Uuid
-  courseId            String   @unique @map("course_id") @db.Uuid
+  id                  BigInt   @id @default(autoincrement())
+  courseId            BigInt   @unique @map("course_id")
   allowSelfEnrollment Boolean  @default(true) @map("allow_self_enrollment")
   requiresApproval    Boolean  @default(false) @map("requires_approval")
   showInCatalog       Boolean  @default(true) @map("show_in_catalog")

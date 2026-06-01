@@ -89,8 +89,9 @@
  *       type: object
  *       properties:
  *         id:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *         name:
  *           type: string
  *           example: Instructor
@@ -104,11 +105,13 @@
  *       type: object
  *       properties:
  *         id:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *         roleId:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *         role:
  *           $ref: '#/components/schemas/RoleSummary'
  *         createdAt:
@@ -118,8 +121,9 @@
  *       type: object
  *       properties:
  *         id:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *         username:
  *           type: string
  *           example: johndoe
@@ -158,8 +162,9 @@
  *       type: object
  *       properties:
  *         id:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *         key:
  *           type: string
  *           example: instructor
@@ -181,11 +186,13 @@
  *             type: object
  *             properties:
  *               id:
- *                 type: string
- *                 format: uuid
+ *                 type: integer
+ *                 format: int64
+ *                 example: 1
  *               permissionId:
- *                 type: string
- *                 format: uuid
+ *                 type: integer
+ *                 format: int64
+ *                 example: 1
  *               permission:
  *                 $ref: '#/components/schemas/Permission'
  *     RoleListData:
@@ -201,8 +208,9 @@
  *       type: object
  *       properties:
  *         id:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *         key:
  *           type: string
  *           example: courses.read
@@ -268,7 +276,7 @@
  *           type: string
  *         role:
  *           type: string
- *           description: Role key or UUID (not super_admin)
+ *           description: Role key (not super_admin)
  *           example: instructor
  *     CreateRoleRequest:
  *       type: object
@@ -316,8 +324,9 @@
  *       type: object
  *       properties:
  *         id:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *         name:
  *           type: string
  *           example: Programming
@@ -334,8 +343,9 @@
  *       type: object
  *       properties:
  *         id:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *         allowSelfEnrollment:
  *           type: boolean
  *           example: true
@@ -358,8 +368,9 @@
  *       type: object
  *       properties:
  *         id:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *         username:
  *           type: string
  *         email:
@@ -371,8 +382,9 @@
  *       type: object
  *       properties:
  *         id:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *         isPrimary:
  *           type: boolean
  *           example: true
@@ -385,8 +397,9 @@
  *       type: object
  *       properties:
  *         id:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *         username:
  *           type: string
  *         email:
@@ -398,8 +411,9 @@
  *       type: object
  *       properties:
  *         id:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *         title:
  *           type: string
  *           example: Introduction to JavaScript
@@ -419,12 +433,14 @@
  *         status:
  *           $ref: '#/components/schemas/CourseStatus'
  *         categoryId:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *           nullable: true
  *         createdById:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -483,8 +499,9 @@
  *           type: string
  *           format: uri
  *         categoryId:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *     UpdateCourseRequest:
  *       type: object
  *       properties:
@@ -503,8 +520,9 @@
  *           type: string
  *           format: uri
  *         categoryId:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *         settings:
  *           type: object
  *           properties:
@@ -530,8 +548,9 @@
  *       required: [userId]
  *       properties:
  *         userId:
- *           type: string
- *           format: uuid
+ *           type: integer
+ *           format: int64
+ *           example: 1
  *         isPrimary:
  *           type: boolean
  *           default: false

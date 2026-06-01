@@ -7,8 +7,15 @@ import { setupSwagger } from "./configurations/swagger.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
 import apiRoutes from "./routes/index.js";
 import { ApiError } from "./utils/ApiError.js";
+import { serializeBigInt } from "./utils/serializeBigInt.js";
 
 const app = express();
+
+app.use((req, res, next) => {
+    const originalJson = res.json.bind(res);
+    res.json = (body) => originalJson(serializeBigInt(body));
+    next();
+});
 
 // Enable Swagger UI Documentation in development environment only
 if (config.app.environment === "development") {

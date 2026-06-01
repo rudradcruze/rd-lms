@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+    permissionIdBody,
+    roleIdParamSchema,
+    rolePermissionParamsSchema,
+} from "../../../utils/validationSchemas.js";
 
 export const createRoleSchema = z.object({
     body: z.object({
@@ -12,6 +17,7 @@ export const createRoleSchema = z.object({
 });
 
 export const updateRoleSchema = z.object({
+    params: roleIdParamSchema.shape.params,
     body: z.object({
         name: z.string().optional(),
         description: z.string().optional(),
@@ -19,7 +25,10 @@ export const updateRoleSchema = z.object({
 });
 
 export const assignPermissionSchema = z.object({
+    params: roleIdParamSchema.shape.params,
     body: z.object({
-        permissionId: z.string().min(1, "Permission ID is required"),
+        permissionId: permissionIdBody,
     }),
 });
+
+export { roleIdParamSchema, rolePermissionParamsSchema };

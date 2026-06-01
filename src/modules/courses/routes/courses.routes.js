@@ -68,10 +68,10 @@ router.get(
  *         description: Admins only when authenticated; public requests always receive published courses
  *       - in: query
  *         name: categoryId
- *         schema: { type: string, format: uuid }
+ *         schema: { type: integer, format: int64, example: 1 }
  *       - in: query
  *         name: instructorId
- *         schema: { type: string, format: uuid }
+ *         schema: { type: integer, format: int64, example: 1 }
  *     responses:
  *       200:
  *         description: Courses retrieved successfully
@@ -103,7 +103,7 @@ router.get(
  *       - in: path
  *         name: courseId
  *         required: true
- *         schema: { type: string, format: uuid }
+ *         schema: { type: integer, format: int64, example: 1 }
  *     responses:
  *       200:
  *         description: Instructors retrieved successfully
@@ -141,7 +141,7 @@ router.get(
  *       - in: path
  *         name: courseId
  *         required: true
- *         schema: { type: string, format: uuid }
+ *         schema: { type: integer, format: int64, example: 1 }
  *     responses:
  *       200:
  *         description: Course retrieved successfully
@@ -280,7 +280,7 @@ router.post(
  *       - in: path
  *         name: courseId
  *         required: true
- *         schema: { type: string, format: uuid }
+ *         schema: { type: integer, format: int64, example: 1 }
  *     requestBody:
  *       content:
  *         application/json:
@@ -336,7 +336,7 @@ router.patch(
  *       - in: path
  *         name: courseId
  *         required: true
- *         schema: { type: string, format: uuid }
+ *         schema: { type: integer, format: int64, example: 1 }
  *     responses:
  *       200:
  *         description: Course published successfully
@@ -387,7 +387,7 @@ router.patch(
  *       - in: path
  *         name: courseId
  *         required: true
- *         schema: { type: string, format: uuid }
+ *         schema: { type: integer, format: int64, example: 1 }
  *     responses:
  *       200:
  *         description: Course archived successfully
@@ -432,7 +432,7 @@ router.patch(
  *       - in: path
  *         name: courseId
  *         required: true
- *         schema: { type: string, format: uuid }
+ *         schema: { type: integer, format: int64, example: 1 }
  *     responses:
  *       200:
  *         description: Course deleted successfully
@@ -472,7 +472,7 @@ router.delete(
  *       - in: path
  *         name: courseId
  *         required: true
- *         schema: { type: string, format: uuid }
+ *         schema: { type: integer, format: int64, example: 1 }
  *     requestBody:
  *       required: true
  *       content:
@@ -523,11 +523,11 @@ router.post(
  *       - in: path
  *         name: courseId
  *         required: true
- *         schema: { type: string, format: uuid }
+ *         schema: { type: integer, format: int64, example: 1 }
  *       - in: path
  *         name: userId
  *         required: true
- *         schema: { type: string, format: uuid }
+ *         schema: { type: integer, format: int64, example: 1 }
  *     responses:
  *       200:
  *         description: Instructor removed successfully

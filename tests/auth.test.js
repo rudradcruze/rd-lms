@@ -37,6 +37,8 @@ describe("Auth API", () => {
             expect(res.body.data.user.userInfo.firstName).toBe("Test");
             expect(res.body.data.user.userInfo.lastName).toBe("User");
             expect(res.body.data.user.userRoles[0].role.key).toBe("student");
+            expect(typeof res.body.data.user.id).toBe("string");
+            expect(res.body.data.user.id).toMatch(/^\d+$/);
         });
 
         it("should reject duplicate email", async () => {

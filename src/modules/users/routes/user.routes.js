@@ -9,6 +9,9 @@ import {
     assignRoleSchema,
     grantPermissionSchema,
     onboardUserSchema,
+    userIdParamSchema,
+    userPermissionParamsSchema,
+    userRoleParamsSchema,
 } from "../schemas/user.schema.js";
 
 
@@ -132,7 +135,7 @@ router.post(
  *       - in: path
  *         name: userId
  *         required: true
- *         schema: { type: string }
+ *         schema: { type: integer, format: int64, example: 1 }
  *     responses:
  *       200:
  *         description: User retrieved successfully
@@ -155,6 +158,7 @@ router.post(
 router.get(
     "/:userId",
     authorize(["admin", "super_admin"]),
+    validate(userIdParamSchema),
     asyncHandler((req, res) => UserController.getUserById(req, res))
 );
 
@@ -170,12 +174,13 @@ router.get(
  *       - in: path
  *         name: userId
  *         required: true
- *         schema: { type: string }
- *         description: User UUID
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric user ID (serialized as string in JSON responses)
  */
 router.patch(
     "/:userId/block",
     authorize(["admin", "super_admin"]),
+    validate(userIdParamSchema),
     asyncHandler((req, res) => UserController.blockUser(req, res))
 );
 
@@ -191,12 +196,13 @@ router.patch(
  *       - in: path
  *         name: userId
  *         required: true
- *         schema: { type: string }
- *         description: User UUID
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric user ID (serialized as string in JSON responses)
  */
 router.patch(
     "/:userId/unblock",
     authorize(["admin", "super_admin"]),
+    validate(userIdParamSchema),
     asyncHandler((req, res) => UserController.unblockUser(req, res))
 );
 
@@ -212,12 +218,13 @@ router.patch(
  *       - in: path
  *         name: userId
  *         required: true
- *         schema: { type: string }
- *         description: User UUID
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric user ID (serialized as string in JSON responses)
  */
 router.patch(
     "/:userId/activate",
     authorize(["admin", "super_admin"]),
+    validate(userIdParamSchema),
     asyncHandler((req, res) => UserController.activateUser(req, res))
 );
 
@@ -233,12 +240,13 @@ router.patch(
  *       - in: path
  *         name: userId
  *         required: true
- *         schema: { type: string }
- *         description: User UUID
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric user ID (serialized as string in JSON responses)
  */
 router.patch(
     "/:userId/deactivate",
     authorize(["admin", "super_admin"]),
+    validate(userIdParamSchema),
     asyncHandler((req, res) => UserController.deactivateUser(req, res))
 );
 
@@ -254,8 +262,8 @@ router.patch(
  *       - in: path
  *         name: userId
  *         required: true
- *         schema: { type: string }
- *         description: User UUID
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric user ID (serialized as string in JSON responses)
  *     requestBody:
  *       required: true
  *       content:
@@ -266,7 +274,7 @@ router.patch(
  *             properties:
  *               roleId:
  *                 type: string
- *                 description: Role UUID or key (e.g. "admin", "instructor", "student")
+ *                 description: Numeric role ID or key (e.g. "admin", "instructor", "student")
  */
 router.post(
     "/:userId/roles",
@@ -287,17 +295,18 @@ router.post(
  *       - in: path
  *         name: userId
  *         required: true
- *         schema: { type: string }
- *         description: User UUID
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric user ID (serialized as string in JSON responses)
  *       - in: path
  *         name: roleId
  *         required: true
- *         schema: { type: string }
- *         description: Role UUID or key
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric role ID
  */
 router.delete(
     "/:userId/roles/:roleId",
     authorize(["super_admin"]),
+    validate(userRoleParamsSchema),
     asyncHandler((req, res) => UserController.removeRoleFromUser(req, res))
 );
 
@@ -313,8 +322,8 @@ router.delete(
  *       - in: path
  *         name: userId
  *         required: true
- *         schema: { type: string }
- *         description: User UUID
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric user ID (serialized as string in JSON responses)
  *     requestBody:
  *       required: true
  *       content:
@@ -325,7 +334,7 @@ router.delete(
  *             properties:
  *               permissionId:
  *                 type: string
- *                 description: Permission UUID or key
+ *                 description: Numeric permission ID or key
  */
 router.post(
     "/:userId/permissions",
@@ -346,17 +355,18 @@ router.post(
  *       - in: path
  *         name: userId
  *         required: true
- *         schema: { type: string }
- *         description: User UUID
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric user ID (serialized as string in JSON responses)
  *       - in: path
  *         name: permissionId
  *         required: true
- *         schema: { type: string }
- *         description: Permission UUID or key
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric permission ID
  */
 router.post(
     "/:userId/permissions/:permissionId/deny",
     authorize(["super_admin"]),
+    validate(userPermissionParamsSchema),
     asyncHandler((req, res) => UserController.denyPermissionToUser(req, res))
 );
 
@@ -372,17 +382,18 @@ router.post(
  *       - in: path
  *         name: userId
  *         required: true
- *         schema: { type: string }
- *         description: User UUID
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric user ID (serialized as string in JSON responses)
  *       - in: path
  *         name: permissionId
  *         required: true
- *         schema: { type: string }
- *         description: Permission UUID or key
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric permission ID
  */
 router.delete(
     "/:userId/permissions/:permissionId",
     authorize(["super_admin"]),
+    validate(userPermissionParamsSchema),
     asyncHandler((req, res) =>
         UserController.revokePermissionFromUser(req, res)
     )
@@ -400,8 +411,8 @@ router.delete(
  *       - in: path
  *         name: userId
  *         required: true
- *         schema: { type: string }
- *         description: User UUID
+ *         schema: { type: integer, format: int64, example: 1 }
+ *         description: Numeric user ID (serialized as string in JSON responses)
  *     responses:
  *       200:
  *         description: Resolved permissions retrieved
@@ -418,6 +429,7 @@ router.delete(
 router.get(
     "/:userId/permissions",
     authorize(["admin", "super_admin"]),
+    validate(userIdParamSchema),
     asyncHandler((req, res) => UserController.getUserPermissions(req, res))
 );
 
