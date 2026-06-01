@@ -319,6 +319,7 @@ const ROLE_PERMISSIONS = {
         "quizzes.update",
         "quizzes.grade",
         "enrollments.read",
+        "enrollments.manage",
         "progress.read",
         "announcements.read",
         "announcements.create",

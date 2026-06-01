@@ -1,6 +1,6 @@
 # MEMORY
 
-Last updated: 2026-06-01
+Last updated: 2026-06-01 (BR-03 enrollments)
 
 ## 1) Stack (from `package.json`)
 
@@ -50,13 +50,14 @@ Scripts:
     - `roles/` -> constants, routes, schemas, controller, service, repository
     - `permissions/` -> constants, routes, schemas, controller, service, resolver service, repository
     - `courses/` -> constants, routes, schemas, controller, service, repository
+    - `enrollments/` -> constants, routes, schemas, controller, service, repository
 - `prisma/`
   - `schema.prisma`
   - `seed.js`
   - `migrations/` (fresh `init_bigint_identifiers` migration + lock)
 - `tests/`
   - `helpers/setup.js`
-  - `auth.test.js`, `roles.test.js`, `users.test.js`, `permissions.test.js`, `courses.test.js`
+  - `auth.test.js`, `roles.test.js`, `users.test.js`, `permissions.test.js`, `courses.test.js`, `enrollments.test.js`
 - Root config/docs:
   - `README.md`, `.env.example`, `jest.config.js`, `.prettierrc`, `.prettierignore`, `.gitignore`
   - `package.json`, `package-lock.json`
@@ -80,6 +81,7 @@ Scripts:
   - one-to-one optional `userInfo`
   - one-to-many `createdCourses` (as creator)
   - one-to-many `courseInstructors`
+  - one-to-many `enrollmentsAsStudent`, `enrollmentsApproved`, `enrollmentsRejected`, `enrollmentsWithdrawn`
 
 ### `UserInfo` (`user_info`)
 - `id` BigInt PK (autoincrement)
@@ -151,7 +153,7 @@ Scripts:
 - `deletedAt` nullable (soft delete)
 - timestamps
 - indexes: `status`, `categoryId`
-- relations: `category`, `creator`, `instructors`, `settings`
+- relations: `category`, `creator`, `instructors`, `settings`, `enrollments`
 
 ### `CourseInstructor` (`course_instructors`)
 - `id` BigInt PK (autoincrement)
@@ -170,9 +172,26 @@ Scripts:
 - `enableDiscussions` bool default true
 - timestamps
 
+### `Enrollment` (`enrollments`) — BR-03
+- `id` BigInt PK (autoincrement)
+- `studentId` BigInt FK -> `users.id` (restrict)
+- `courseId` BigInt FK -> `courses.id` (restrict)
+- `status` enum `EnrollmentStatus` (`PENDING`, `APPROVED`, `REJECTED`, `WITHDRAWN`)
+- audit: `approvedAt`, `approvedById`, `rejectedAt`, `rejectedById`, `withdrawnAt`, `withdrawnById` (nullable)
+- timestamps: `createdAt`, `updatedAt`
+- unique composite: `(studentId, courseId)` — permanent record; no delete API
+- indexes: `studentId`, `courseId`, `status`
+- relations: `student`, `course`, `approvedBy`, `rejectedBy`, `withdrawnBy` (User)
+
+Status transitions (service-enforced):
+- `PENDING` -> `APPROVED` | `REJECTED` | `WITHDRAWN`
+- `APPROVED` -> `WITHDRAWN`
+- terminal: `REJECTED`, `WITHDRAWN`
+
 Soft delete:
-- `Course.deletedAt` — soft-deleted courses hidden from normal queries.
+- `Course.deletedAt` — soft-deleted courses hidden from normal queries; ineligible for enrollment.
 - Token invalidation is logical via `refresh_tokens.blacklisted_at`.
+- Enrollment rows are never hard- or soft-deleted.
 
 ## 4) API Route Inventory (actual code)
 
@@ -260,6 +279,23 @@ Service-level access rules (courses):
 - Update/publish: primary instructor OR admin/super_admin.
 - Archive/delete/assign instructors: admin/super_admin only.
 
+### Enrollment routes (`src/modules/enrollments/routes/enrollments.routes.js`)
+- Router-level: `router.use(authenticate)`
+- `POST /enrollments` -> `permission(["enrollments.read"]) -> validate(createEnrollmentSchema)` — student self-enroll (`body.courseId`); auto `APPROVED` or `PENDING` from `course.settings.requiresApproval`
+- `GET /enrollments` -> `permission(["enrollments.read"]) -> validate(listEnrollmentsSchema)` — list (scoped: student own, instructor owned courses, admin all); filters: `status`, `courseId`, `studentId`, `dateFrom`, `dateTo`, pagination
+- `GET /enrollments/my` -> `permission(["enrollments.read"])` — student active (`PENDING`, `APPROVED`)
+- `GET /enrollments/history` -> `permission(["enrollments.read"])` — student history (`APPROVED`, `REJECTED`, `WITHDRAWN`)
+- `GET /enrollments/:enrollmentId` -> `permission(["enrollments.read"]) -> validate(enrollmentIdParamSchema)` — detail with visibility rules
+- `PATCH /enrollments/:enrollmentId/approve` -> `permission(["enrollments.manage"])` — instructor (course `CourseInstructor`) or admin/super_admin
+- `PATCH /enrollments/:enrollmentId/reject` -> `permission(["enrollments.manage"])` — same as approve
+- `PATCH /enrollments/:enrollmentId/withdraw` -> `permission(["enrollments.read"])` — student own or admin/super_admin
+
+Service-level enrollment rules:
+- Eligible course: exists, `PUBLISHED`, not `ARCHIVED`, `deletedAt` null — else `400` "Course is not available for enrollment"
+- Duplicate `(studentId, courseId)` -> `409` "Student already enrolled"
+- Invalid status transition -> `400` "Invalid enrollment status transition"
+- Visibility/manage denial -> `403` "Access denied"
+
 ## 5) Auth System (JWT/session)
 
 Token generation (`src/utils/generateTokens.js`):
@@ -314,6 +350,12 @@ Course permission role mappings (seed):
 - `admin`: all 5 course keys (`read`, `create`, `update`, `delete`, `publish`)
 - `instructor`: `read`, `create`, `update`, `publish` (no `delete`)
 - `student`: `read` only
+
+Enrollment permission role mappings (seed, BR-03):
+- `super_admin`: all
+- `admin`: `enrollments.read`, `enrollments.manage`
+- `instructor`: `enrollments.read`, `enrollments.manage`
+- `student`: `enrollments.read`
 
 ## 7) Response Envelope
 
@@ -379,7 +421,7 @@ Shared ID helpers (`src/utils/validationSchemas.js`):
 - `positiveBigIntParam` — route/query IDs: digits-only string → positive `BigInt` (rejects `abc`, `1.5`, `-1`, `0`).
 - `optionalPositiveBigInt` — optional query FKs.
 - `roleIdBody` / `permissionIdBody` — request body: numeric ID **or** stable key string (e.g. `"instructor"`, `"courses.read"`).
-- Param schemas: `userIdParamSchema`, `roleIdParamSchema`, `permissionIdParamSchema`, `courseIdParamSchema`, and composite variants.
+- Param schemas: `userIdParamSchema`, `roleIdParamSchema`, `permissionIdParamSchema`, `courseIdParamSchema`, `enrollmentIdParamSchema`, and composite variants.
 
 Schema locations:
 - `src/modules/auth/schemas/auth.schema.js`
@@ -387,6 +429,7 @@ Schema locations:
 - `src/modules/roles/schemas/role.schema.js`
 - `src/modules/permissions/schemas/permission.schema.js`
 - `src/modules/courses/schemas/courses.schema.js`
+- `src/modules/enrollments/schemas/enrollments.schema.js`
 
 Application pattern:
 - Route-level `validate(schema)` middleware before controller; coerced `params` merged back into `req.params` as strings for Prisma.
@@ -421,6 +464,7 @@ Coverage areas:
 - `tests/users.test.js`: user listing/filtering, block/unblock, activate/deactivate, role assignment safeguards, user permission overrides, onboarding; BigInt path param validation matrix.
 - `tests/permissions.test.js`: permission CRUD + auth guards; BigInt path param validation matrix.
 - `tests/courses.test.js`: course CRUD lifecycle, publishing ownership, listing visibility, instructor assignment, soft delete, validation.
+- `tests/enrollments.test.js`: BR-03 enrollment create/approve/reject/withdraw, listing scopes, history preservation, RBAC, validation, unique constraint.
 
 ## 14) Observed Inconsistencies / Clarifications
 
@@ -434,6 +478,7 @@ Coverage areas:
 
 | Date | Author | Change |
 |---|---|---|
+| 2026-06-01 | Agent | BR-03: Enrollments module — `Enrollment` model, `/api/v1/enrollments` API, status lifecycle, RBAC (`enrollments.read`/`manage`), instructor `enrollments.manage` in seed, `tests/enrollments.test.js`. |
 | 2026-06-01 | Agent | Platform identifier strategy updated from UUID to BigInt auto-increment identifiers. |
 | 2026-05-31 | Agent | Centralized OpenAPI component schemas in `swagger.schemas.js`; route JSDoc uses `$ref` for request/response models; RULES.md section 8 documents Swagger workflow. |
 | 2026-05-31 | Agent | Implemented BR-02 courses module: Prisma models, seed categories, full API at `/api/v1/courses`, instructor role no longer has `courses.delete`. |

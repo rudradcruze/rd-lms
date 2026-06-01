@@ -96,3 +96,9 @@ export const courseUserParamsSchema = z.object({
         userId: positiveBigIntParam,
     }),
 });
+
+export const enrollmentIdParamSchema = z.object({
+    params: z.object({
+        enrollmentId: positiveBigIntParam,
+    }),
+});

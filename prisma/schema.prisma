@@ -13,6 +13,13 @@ enum CourseStatus {
   ARCHIVED
 }
 
+enum EnrollmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
 model User {
   id                BigInt             @id @default(autoincrement())
   username          String             @unique @db.VarChar(16)
@@ -26,8 +33,12 @@ model User {
   userRoles         UserRole[]
   userPermissions   UserPermission[]
   userInfo          UserInfo?
-  createdCourses    Course[]           @relation("CourseCreator")
-  courseInstructors CourseInstructor[]
+  createdCourses       Course[]       @relation("CourseCreator")
+  courseInstructors    CourseInstructor[]
+  enrollmentsAsStudent Enrollment[]   @relation("EnrollmentStudent")
+  enrollmentsApproved  Enrollment[]   @relation("EnrollmentApprovedBy")
+  enrollmentsRejected  Enrollment[]   @relation("EnrollmentRejectedBy")
+  enrollmentsWithdrawn Enrollment[]   @relation("EnrollmentWithdrawnBy")
 
   @@map("users")
 }
@@ -158,6 +169,7 @@ model Course {
   creator          User               @relation("CourseCreator", fields: [createdById], references: [id], onDelete: Restrict)
   instructors      CourseInstructor[]
   settings         CourseSettings?
+  enrollments      Enrollment[]
 
   @@index([status])
   @@index([categoryId])
@@ -189,4 +201,31 @@ model CourseSettings {
   course              Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@map("course_settings")
+}
+
+model Enrollment {
+  id            BigInt           @id @default(autoincrement())
+  studentId     BigInt           @map("student_id")
+  courseId      BigInt           @map("course_id")
+  status        EnrollmentStatus
+  approvedAt    DateTime?        @map("approved_at")
+  approvedById  BigInt?          @map("approved_by_id")
+  rejectedAt    DateTime?        @map("rejected_at")
+  rejectedById  BigInt?          @map("rejected_by_id")
+  withdrawnAt   DateTime?        @map("withdrawn_at")
+  withdrawnById BigInt?          @map("withdrawn_by_id")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  student     User   @relation("EnrollmentStudent", fields: [studentId], references: [id], onDelete: Restrict)
+  course      Course @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  approvedBy  User?  @relation("EnrollmentApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  rejectedBy  User?  @relation("EnrollmentRejectedBy", fields: [rejectedById], references: [id], onDelete: SetNull)
+  withdrawnBy User?  @relation("EnrollmentWithdrawnBy", fields: [withdrawnById], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, courseId], map: "unique_student_course")
+  @@index([studentId])
+  @@index([courseId])
+  @@index([status])
+  @@map("enrollments")
 }

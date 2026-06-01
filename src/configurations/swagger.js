@@ -470,6 +470,7 @@ const options = {
         "./src/modules/roles/routes/role.routes.js",
         "./src/modules/permissions/routes/permission.routes.js",
         "./src/modules/courses/routes/courses.routes.js",
+        "./src/modules/enrollments/routes/enrollments.routes.js",
     ],
 };
 

@@ -554,6 +554,125 @@
  *         isPrimary:
  *           type: boolean
  *           default: false
+ *     EnrollmentStatus:
+ *       type: string
+ *       enum: [PENDING, APPROVED, REJECTED, WITHDRAWN]
+ *       example: PENDING
+ *     EnrollmentUserSummary:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           format: int64
+ *           example: 1
+ *         username:
+ *           type: string
+ *         email:
+ *           type: string
+ *           format: email
+ *         userInfo:
+ *           $ref: '#/components/schemas/UserInfo'
+ *     EnrollmentCourseSummary:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           format: int64
+ *           example: 1
+ *         title:
+ *           type: string
+ *         slug:
+ *           type: string
+ *         status:
+ *           $ref: '#/components/schemas/CourseStatus'
+ *     Enrollment:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           format: int64
+ *           example: 1
+ *         studentId:
+ *           type: integer
+ *           format: int64
+ *           example: 1
+ *         courseId:
+ *           type: integer
+ *           format: int64
+ *           example: 1
+ *         status:
+ *           $ref: '#/components/schemas/EnrollmentStatus'
+ *         approvedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *         approvedById:
+ *           type: integer
+ *           format: int64
+ *           nullable: true
+ *         rejectedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *         rejectedById:
+ *           type: integer
+ *           format: int64
+ *           nullable: true
+ *         withdrawnAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *         withdrawnById:
+ *           type: integer
+ *           format: int64
+ *           nullable: true
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *         student:
+ *           $ref: '#/components/schemas/EnrollmentUserSummary'
+ *         course:
+ *           $ref: '#/components/schemas/EnrollmentCourseSummary'
+ *         approvedBy:
+ *           $ref: '#/components/schemas/EnrollmentUserSummary'
+ *         rejectedBy:
+ *           $ref: '#/components/schemas/EnrollmentUserSummary'
+ *         withdrawnBy:
+ *           $ref: '#/components/schemas/EnrollmentUserSummary'
+ *     CreateEnrollmentRequest:
+ *       type: object
+ *       required: [courseId]
+ *       properties:
+ *         courseId:
+ *           type: integer
+ *           format: int64
+ *           example: 1
+ *     EnrollmentListData:
+ *       type: object
+ *       properties:
+ *         enrollments:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Enrollment'
+ *         page:
+ *           type: integer
+ *           example: 1
+ *         limit:
+ *           type: integer
+ *           example: 10
+ *         total:
+ *           type: integer
+ *           example: 25
+ *         totalPages:
+ *           type: integer
+ *           example: 3
+ *         hasNextPage:
+ *           type: boolean
+ *         hasPrevPage:
+ *           type: boolean
  */
 
 export {};
