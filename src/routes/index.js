@@ -5,6 +5,7 @@ import enrollmentRoutes from "../modules/enrollments/routes/enrollments.routes.j
 import permissionRoutes from "../modules/permissions/routes/permission.routes.js";
 import roleRoutes from "../modules/roles/routes/role.routes.js";
 import userRoutes from "../modules/users/routes/user.routes.js";
+import contentRoutes from "../modules/content/routes/content.routes.js";
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use("/permissions", permissionRoutes);
 router.use("/users", userRoutes);
 router.use("/courses", courseRoutes);
 router.use("/enrollments", enrollmentRoutes);
+router.use("/content", contentRoutes);
 
 export default router;

@@ -145,7 +145,7 @@ describe("Enrollments API", () => {
         await enrollAsStudent(businessCourseId);
 
         const draftList = await request
-            .get("/api/v1/courses?limit=100&status=DRAFT")
+            .get("/api/v1/courses?status=DRAFT&search=calculus-essentials")
             .set("Authorization", `Bearer ${adminToken}`);
         const draftCourse = draftList.body.data.courses.find(
             (c) => c.slug === "calculus-essentials",

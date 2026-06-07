@@ -141,6 +141,13 @@ const PERMISSIONS = [
         action: "delete",
         description: "Remove learning materials",
     },
+    {
+        key: "content.publish",
+        name: "Publish Content",
+        resource: "content",
+        action: "publish",
+        description: "Publish learning materials",
+    },
 
     // Assignment Management (BR-05)
     {
@@ -292,6 +299,10 @@ const ROLE_PERMISSIONS = {
         "enrollments.read",
         "enrollments.manage",
         "content.read",
+        "content.create",
+        "content.update",
+        "content.delete",
+        "content.publish",
         "assignments.read",
         "quizzes.read",
         "progress.read",
@@ -310,6 +321,7 @@ const ROLE_PERMISSIONS = {
         "content.create",
         "content.update",
         "content.delete",
+        "content.publish",
         "assignments.read",
         "assignments.create",
         "assignments.update",

@@ -8,6 +8,10 @@ const requiredEnvVariables = [
     "ALLOWED_ORIGINS",
     "JWT_ACCESS_SECRET",
     "JWT_REFRESH_SECRET",
+
+    "CLOUDINARY_CLOUD_NAME",
+    "CLOUDINARY_API_KEY",
+    "CLOUDINARY_API_SECRET",
 ];
 
 requiredEnvVariables.forEach((key) => {
@@ -34,7 +38,7 @@ const config = {
     cors: {
         allowedOrigins: process.env.ALLOWED_ORIGINS
             ? process.env.ALLOWED_ORIGINS.split(",").map((origin) =>
-                  origin.trim(),
+                  origin.trim()
               )
             : ["http://localhost:5173", "http://localhost:3000"],
         credentials: true,
@@ -43,6 +47,12 @@ const config = {
     jwt: {
         accessSecret: process.env.JWT_ACCESS_SECRET,
         refreshSecret: process.env.JWT_REFRESH_SECRET,
+    },
+
+    cloudinary: {
+        cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+        apiKey: process.env.CLOUDINARY_API_KEY,
+        apiSecret: process.env.CLOUDINARY_API_SECRET,
     },
 };
 

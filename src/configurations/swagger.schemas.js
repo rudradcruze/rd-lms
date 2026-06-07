@@ -673,6 +673,256 @@
  *           type: boolean
  *         hasPrevPage:
  *           type: boolean
+ *     CourseSection:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           format: int64
+ *           example: 1
+ *         courseId:
+ *           type: integer
+ *           format: int64
+ *           example: 1
+ *         title:
+ *           type: string
+ *           example: Module 1 - Introduction
+ *         description:
+ *           type: string
+ *           nullable: true
+ *           example: Overview of course goals
+ *         position:
+ *           type: integer
+ *           example: 0
+ *         isPublished:
+ *           type: boolean
+ *           example: false
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *         contents:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/CourseContent'
+ *     CourseContent:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           format: int64
+ *           example: 1
+ *         sectionId:
+ *           type: integer
+ *           format: int64
+ *           example: 1
+ *         title:
+ *           type: string
+ *           example: Welcome Video
+ *         description:
+ *           type: string
+ *           nullable: true
+ *           example: Course introduction video
+ *         contentType:
+ *           type: string
+ *           enum: [VIDEO, PDF, NOTE, IMAGE, AUDIO, EXTERNAL_LINK]
+ *           example: VIDEO
+ *         position:
+ *           type: integer
+ *           example: 0
+ *         isPublished:
+ *           type: boolean
+ *           example: false
+ *         createdById:
+ *           type: integer
+ *           format: int64
+ *           example: 1
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *         assets:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/ContentAsset'
+ *     ContentAsset:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           format: int64
+ *           example: 1
+ *         contentId:
+ *           type: integer
+ *           format: int64
+ *           example: 1
+ *         provider:
+ *           type: string
+ *           example: cloudinary
+ *         publicId:
+ *           type: string
+ *           nullable: true
+ *           example: lms_videos/intro
+ *         secureUrl:
+ *           type: string
+ *           format: uri
+ *           example: https://res.cloudinary.com/demo/video/upload/v1/intro.mp4
+ *         originalFileName:
+ *           type: string
+ *           nullable: true
+ *           example: welcome.mp4
+ *         mimeType:
+ *           type: string
+ *           nullable: true
+ *           example: video/mp4
+ *         sizeBytes:
+ *           type: integer
+ *           format: int64
+ *           nullable: true
+ *           example: 1548293
+ *         durationSeconds:
+ *           type: integer
+ *           nullable: true
+ *           example: 120
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *     CreateSectionRequest:
+ *       type: object
+ *       required: [courseId, title]
+ *       properties:
+ *         courseId:
+ *           type: integer
+ *           format: int64
+ *           example: 1
+ *         title:
+ *           type: string
+ *           example: Module 1 - Getting Started
+ *         description:
+ *           type: string
+ *           example: The basics of the course.
+ *         position:
+ *           type: integer
+ *           example: 0
+ *     UpdateSectionRequest:
+ *       type: object
+ *       properties:
+ *         title:
+ *           type: string
+ *         description:
+ *           type: string
+ *         position:
+ *           type: integer
+ *     CreateContentRequest:
+ *       type: object
+ *       required: [sectionId, title, contentType]
+ *       properties:
+ *         sectionId:
+ *           type: integer
+ *           format: int64
+ *           example: 1
+ *         title:
+ *           type: string
+ *           example: Welcome Video
+ *         description:
+ *           type: string
+ *           example: Welcome to the course
+ *         contentType:
+ *           type: string
+ *           enum: [VIDEO, PDF, NOTE, IMAGE, AUDIO, EXTERNAL_LINK]
+ *           example: VIDEO
+ *         position:
+ *           type: integer
+ *           example: 0
+ *         asset:
+ *           type: object
+ *           properties:
+ *             provider:
+ *               type: string
+ *             publicId:
+ *               type: string
+ *             secureUrl:
+ *               type: string
+ *             originalFileName:
+ *               type: string
+ *             mimeType:
+ *               type: string
+ *             sizeBytes:
+ *               type: integer
+ *             durationSeconds:
+ *               type: integer
+ *     UpdateContentRequest:
+ *       type: object
+ *       properties:
+ *         title:
+ *           type: string
+ *         description:
+ *           type: string
+ *         contentType:
+ *           type: string
+ *           enum: [VIDEO, PDF, NOTE, IMAGE, AUDIO, EXTERNAL_LINK]
+ *         position:
+ *           type: integer
+ *         asset:
+ *           type: object
+ *           properties:
+ *             provider:
+ *               type: string
+ *             publicId:
+ *               type: string
+ *             secureUrl:
+ *               type: string
+ *             originalFileName:
+ *               type: string
+ *             mimeType:
+ *               type: string
+ *             sizeBytes:
+ *               type: integer
+ *             durationSeconds:
+ *               type: integer
+ *     ReorderContentsRequest:
+ *       type: object
+ *       required: [sectionId, contentIds]
+ *       properties:
+ *         sectionId:
+ *           type: integer
+ *           format: int64
+ *           example: 1
+ *         contentIds:
+ *           type: array
+ *           items:
+ *             type: integer
+ *             format: int64
+ *           example: [1, 2, 3]
+ *     UploadResult:
+ *       type: object
+ *       properties:
+ *         publicId:
+ *           type: string
+ *           example: lms_videos/welcome
+ *         secureUrl:
+ *           type: string
+ *           format: uri
+ *           example: https://res.cloudinary.com/demo/video/upload/welcome.mp4
+ *         metadata:
+ *           type: object
+ *           properties:
+ *             originalFileName:
+ *               type: string
+ *               example: welcome.mp4
+ *             mimeType:
+ *               type: string
+ *               example: video/mp4
+ *             sizeBytes:
+ *               type: integer
+ *               example: 1249301
+ *             durationSeconds:
+ *               type: integer
+ *               example: 120
  */
 
 export {};

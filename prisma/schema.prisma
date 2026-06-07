@@ -39,6 +39,7 @@ model User {
   enrollmentsApproved  Enrollment[]   @relation("EnrollmentApprovedBy")
   enrollmentsRejected  Enrollment[]   @relation("EnrollmentRejectedBy")
   enrollmentsWithdrawn Enrollment[]   @relation("EnrollmentWithdrawnBy")
+  createdContents      CourseContent[]
 
   @@map("users")
 }
@@ -170,6 +171,7 @@ model Course {
   instructors      CourseInstructor[]
   settings         CourseSettings?
   enrollments      Enrollment[]
+  sections         CourseSection[]
 
   @@index([status])
   @@index([categoryId])
@@ -228,4 +230,65 @@ model Enrollment {
   @@index([courseId])
   @@index([status])
   @@map("enrollments")
+}
+
+enum ContentType {
+  VIDEO
+  PDF
+  NOTE
+  IMAGE
+  AUDIO
+  EXTERNAL_LINK
+}
+
+model CourseSection {
+  id          BigInt          @id @default(autoincrement())
+  courseId    BigInt          @map("course_id")
+  title       String
+  description String?
+  position    Int
+  isPublished Boolean         @default(false) @map("is_published")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  course      Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  contents    CourseContent[]
+
+  @@index([courseId])
+  @@map("course_sections")
+}
+
+model CourseContent {
+  id          BigInt         @id @default(autoincrement())
+  sectionId   BigInt         @map("section_id")
+  title       String
+  description String?
+  contentType ContentType    @map("content_type")
+  position    Int
+  isPublished Boolean        @default(false) @map("is_published")
+  createdById BigInt         @map("created_by_id")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  section     CourseSection  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  assets      ContentAsset[]
+  creator     User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([sectionId])
+  @@map("course_contents")
+}
+
+model ContentAsset {
+  id               BigInt        @id @default(autoincrement())
+  contentId        BigInt        @map("content_id")
+  provider         String
+  publicId         String?       @map("public_id")
+  secureUrl        String        @map("secure_url")
+  originalFileName String?       @map("original_file_name")
+  mimeType         String?       @map("mime_type")
+  sizeBytes        BigInt?       @map("size_bytes")
+  durationSeconds  Int?          @map("duration_seconds")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  content          CourseContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+  @@map("content_assets")
 }
