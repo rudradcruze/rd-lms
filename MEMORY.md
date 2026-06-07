@@ -242,7 +242,9 @@ Base prefix: `/api/v1`
 - Router-level: `router.use(authenticate)`
 - `GET /users` -> `authorize(["admin","super_admin"])`
 - `POST /users` -> `permission(["users.create"]) -> validate(onboardUserSchema)`
-- `GET /users/:userId` -> `authorize(["admin","super_admin"])`
+- `GET /users/me` -> authenticated only (current user profile: id, username, email, roles, userInfo)
+- `GET /users/by-email` -> `authorize(["admin","super_admin"]) -> validate(getUserByEmailSchema)` (query `email`)
+- `GET /users/:userId` -> `authorize(["admin","super_admin"])` (includes email in response)
 - `PATCH /users/:userId/block` -> `authorize(["admin","super_admin"])`
 - `PATCH /users/:userId/unblock` -> `authorize(["admin","super_admin"])`
 - `PATCH /users/:userId/activate` -> `authorize(["admin","super_admin"])`

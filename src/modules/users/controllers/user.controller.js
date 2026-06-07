@@ -11,6 +11,23 @@ class UserController {
             .json(new ApiResponse(200, user, "User retrieved successfully"));
     }
 
+    async getCurrentUser(req, res) {
+        const user = await UserService.getCurrentUser(req.user.userId);
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, user, "Current user retrieved successfully"),
+            );
+    }
+
+    async getUserByEmail(req, res) {
+        const { email } = req.query;
+        const user = await UserService.getUserByEmail(email);
+        return res
+            .status(200)
+            .json(new ApiResponse(200, user, "User retrieved successfully"));
+    }
+
     async getAllUsers(req, res) {
         const { page = 1, limit = 10, isActive, isBlocked, role } = req.query;
 

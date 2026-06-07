@@ -7,6 +7,7 @@ import { asyncHandler } from "../../../utils/asyncHandler.js";
 import UserController from "../controllers/user.controller.js";
 import {
     assignRoleSchema,
+    getUserByEmailSchema,
     grantPermissionSchema,
     onboardUserSchema,
     userIdParamSchema,
@@ -125,9 +126,97 @@ router.post(
 
 /**
  * @swagger
+ * /users/me:
+ *   get:
+ *     summary: Get the authenticated user's profile
+ *     description: Returns the current user (id, username, email, roles, userInfo). Available to any authenticated user.
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Current user retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
+ */
+router.get(
+    "/me",
+    asyncHandler((req, res) => UserController.getCurrentUser(req, res)),
+);
+
+/**
+ * @swagger
+ * /users/by-email:
+ *   get:
+ *     summary: Get a user by email (admin/super_admin only)
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: email
+ *           example: student1@rd-lms.com
+ *     responses:
+ *       200:
+ *         description: User retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiError'
+ */
+router.get(
+    "/by-email",
+    authorize(["admin", "super_admin"]),
+    validate(getUserByEmailSchema),
+    asyncHandler((req, res) => UserController.getUserByEmail(req, res)),
+);
+
+/**
+ * @swagger
  * /users/{userId}:
  *   get:
  *     summary: Get a user by ID (admin/super_admin only)
+ *     description: Returns user profile including id, username, email, roles, and userInfo.
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
@@ -138,7 +227,7 @@ router.post(
  *         schema: { type: integer, format: int64, example: 1 }
  *     responses:
  *       200:
- *         description: User retrieved successfully
+ *         description: User retrieved successfully (includes email)
  *         content:
  *           application/json:
  *             schema:

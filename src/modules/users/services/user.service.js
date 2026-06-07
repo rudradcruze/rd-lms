@@ -52,6 +52,18 @@ class UserService {
         return user;
     }
 
+    async getUserByEmail(email) {
+        const user = await UserRepository.findPublicByEmail(email);
+        if (!user) {
+            throw new ApiError(404, USER_MESSAGES.USER_NOT_FOUND);
+        }
+        return user;
+    }
+
+    async getCurrentUser(actorId) {
+        return this.getUserById(actorId);
+    }
+
     async getAllUsers(page = 1, limit = 10, filters = {}) {
         const { rows, count } = await UserRepository.findAll({
             limit,

@@ -70,6 +70,13 @@ class UserRepository {
         });
     }
 
+    async findPublicByEmail(email) {
+        return prisma.user.findFirst({
+            where: { email: email.toLowerCase() },
+            select: publicUserSelect,
+        });
+    }
+
     async findByUsername(username) {
         return prisma.user.findFirst({
             where: { username },

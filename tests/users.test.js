@@ -101,6 +101,64 @@ describe("Users API", () => {
         });
     });
 
+    // ── Current user (me) ─────────────────────────────────────────────────────
+    describe("GET /api/v1/users/me", () => {
+        it("returns logged-in user profile with email", async () => {
+            const res = await request
+                .get("/api/v1/users/me")
+                .set("Authorization", `Bearer ${studentToken}`);
+            expect(res.status).toBe(200);
+            expect(res.body.data.id).toBe(studentUserId);
+            expect(res.body.data.email).toBe(CREDS.student.email);
+            expect(res.body.data.username).toBeDefined();
+            expect(res.body.data.userInfo).toBeDefined();
+        });
+
+        it("returns 401 without token", async () => {
+            const res = await request.get("/api/v1/users/me");
+            expect(res.status).toBe(401);
+        });
+    });
+
+    // ── Get user by email ─────────────────────────────────────────────────────
+    describe("GET /api/v1/users/by-email", () => {
+        it("admin can get a user by email", async () => {
+            const res = await request
+                .get(
+                    `/api/v1/users/by-email?email=${encodeURIComponent(CREDS.student.email)}`,
+                )
+                .set("Authorization", `Bearer ${adminToken}`);
+            expect(res.status).toBe(200);
+            expect(res.body.data.id).toBe(studentUserId);
+            expect(res.body.data.email).toBe(CREDS.student.email);
+        });
+
+        it("student cannot look up by email", async () => {
+            const res = await request
+                .get(
+                    `/api/v1/users/by-email?email=${encodeURIComponent(CREDS.student.email)}`,
+                )
+                .set("Authorization", `Bearer ${studentToken}`);
+            expect(res.status).toBe(403);
+        });
+
+        it("returns 404 for unknown email", async () => {
+            const res = await request
+                .get(
+                    "/api/v1/users/by-email?email=unknown_user@rd-lms.com",
+                )
+                .set("Authorization", `Bearer ${adminToken}`);
+            expect(res.status).toBe(404);
+        });
+
+        it("rejects invalid email query", async () => {
+            const res = await request
+                .get("/api/v1/users/by-email?email=not-an-email")
+                .set("Authorization", `Bearer ${adminToken}`);
+            expect(res.status).toBe(400);
+        });
+    });
+
     // ── Get Single User ───────────────────────────────────────────────────────
     describe("GET /api/v1/users/:userId", () => {
         it("admin can get a user by ID", async () => {
@@ -109,6 +167,7 @@ describe("Users API", () => {
                 .set("Authorization", `Bearer ${adminToken}`);
             expect(res.status).toBe(200);
             expect(res.body.data.id).toBe(studentUserId);
+            expect(res.body.data.email).toBe(CREDS.student.email);
         });
 
         it("returns 404 for non-existent userId", async () => {

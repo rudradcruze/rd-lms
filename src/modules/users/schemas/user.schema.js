@@ -22,6 +22,12 @@ export const grantPermissionSchema = z.object({
     }),
 });
 
+export const getUserByEmailSchema = z.object({
+    query: z.object({
+        email: z.string().email("Please provide a valid email address"),
+    }),
+});
+
 export const onboardUserSchema = z.object({
     body: z.object({
         username: z
